@@ -102,7 +102,8 @@ function R(){save();months();
 function go(t){T=t;R();if(t==="team")loadTeam()}
 async function loadTeam(){const {data}=await sb.from("profiles").select("*").order("created_at");TEAM=data||[];if(T==="team")R()}
 async function adm(b){const {data,error}=await sb.functions.invoke("staff-admin",{body:b});
- let m=data&&data.error;if(error){m=error.message;try{m=(await error.context.json()).error||m}catch(e){}}
+ let m=data&&data.error;if(error){m=error.message;try{m=(await error.context.json()).error||m}catch(e){}
+  if(error.name==="FunctionsFetchError")m="เรียกฟังก์ชัน staff-admin ไม่ได้: ตรวจว่า Deploy แล้ว ชื่อตรงเป๊ะ และปิด Verify JWT ในหน้าตั้งค่าของฟังก์ชัน"}
  if(m){alert(m);return false}await loadTeam();return true}
 function vTeam(){return `<div class="bar"><button class="pr" onclick="fStaff()">+ เพิ่มพนักงาน</button></div>`+(TEAM.length?TEAM.map(p=>`<div class="card"><div class="row"><b>${esc(p.name)}</b><span class="tag">${p.role==="owner"?"เจ้าของ":"พนักงาน"}${p.active?"":" · ปิดใช้งาน"}</span></div><div class="s">${esc(p.email)}</div>${p.user_id===ME.user_id?"":`<div class="row"><button class="gh" onclick="fPw('${p.user_id}')">เปลี่ยนรหัสผ่าน</button><button class="sm" style="display:inline-block" onclick="adm({action:'set_active',user_id:'${p.user_id}',active:${!p.active}})">${p.active?"ปิดใช้งาน":"เปิดใช้งาน"}</button></div>`}</div>`).join(""):'<div class="empty">กำลังโหลด...</div>')}
 function fStaff(){form("เพิ่มพนักงาน",[{k:"name",l:"ชื่อพนักงาน"},{k:"email",l:"อีเมล (ใช้ล็อกอิน)",t:"email"},{k:"password",l:"รหัสผ่านเริ่มต้น (อย่างน้อย 6 ตัว)"},{k:"role",l:"สิทธิ์",o:[["staff","พนักงานหน้าร้าน"],["owner","เจ้าของ/ผู้จัดการ"]]}],v=>{if(!v.name||!v.email||v.password.length<6){alert("กรอกชื่อ อีเมล และรหัสผ่านให้ครบ");return false}adm({action:"create",...v})})}
