@@ -33,15 +33,15 @@ label{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}
 .bar{display:flex;gap:8px;margin:10px 0}
 .s{font-size:13px;color:var(--mu)}
 </style></head><body>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <header><h1>🔧 บัญชีร้านซ่อมมือถือ</h1><div style="display:flex;gap:6px"><select id="mon" style="width:auto" onchange="M=this.value;R()"></select><button class="gh" id="out" onclick="logout()">ออก</button></div></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <div class="mod" id="mod"><div id="mbody"></div></div>
 <script>
 /* ===== ตั้งค่า Supabase: Project Settings > API ===== */
-const SUPABASE_URL="https://YOUR-PROJECT.supabase.co";
-const SUPABASE_KEY="YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL="https://lbmiywdkdrdwmwlmuzeh.supabase.co";
+const SUPABASE_KEY="sb_publishable_2Cn8tWZin5thCimvtjGuug_QdiGrMkF";
 /* ================================================== */
 const def={cust:[],jobs:[],parts:[],trx:[],led:[]};
 const KINDS=Object.keys(def);
