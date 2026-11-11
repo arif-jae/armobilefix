@@ -32,6 +32,7 @@ label{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}
 .empty{text-align:center;color:var(--mu);padding:24px}
 .bar{display:flex;gap:8px;margin:10px 0}
 .s{font-size:13px;color:var(--mu)}
+body.staff .sm{display:none}
 </style></head><body>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <header><h1>🔧 บัญชีร้านซ่อมมือถือ</h1><div style="display:flex;gap:6px"><select id="mon" style="width:auto" onchange="M=this.value;R()"></select><button class="gh" id="out" onclick="logout()">ออก</button></div></header>
@@ -73,6 +74,10 @@ async function init(){
  if(SUPABASE_URL.includes("YOUR-")){$("#app").innerHTML='<div class="card">ยังไม่ได้ตั้งค่า SUPABASE_URL และ SUPABASE_KEY ในไฟล์ (ดูหัวสคริปต์)</div>';return}
  const {data}=await sb.auth.getSession();
  if(!data.session){loginView();return}
+ const {data:pf}=await sb.from("profiles").select("*").eq("user_id",data.session.user.id).maybeSingle();
+ if(!pf||!pf.active){$("#nav").innerHTML="";$("#app").innerHTML='<div class="card">บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งาน หรือถูกปิดใช้งาน กรุณาติดต่อเจ้าของร้าน<div class="bar"><button class="gh" onclick="logout()">ออกจากระบบ</button></div></div>';return}
+ ME=pf;if(ME.role!=="owner"){document.body.classList.add("staff");T="jobs"}
+ $("#out").textContent=(ME.name||"")+" · ออก";
  await loadAll();R();
  sb.channel("shop").on("postgres_changes",{event:"*",schema:"public",table:"shop_data"},()=>{
   clearTimeout(tm);tm=setTimeout(async()=>{if(!$("#mod").classList.contains("show")&&!busy){await loadAll();R()}},700)}).subscribe()}
@@ -85,13 +90,23 @@ let M=today().slice(0,7),T="sum";
 const inM=d=>M==="all"||(d||"").startsWith(M);
 const cn=id=>(S.cust.find(c=>c.id===id)||{name:"ลูกค้าทั่วไป"}).name;
 const pn=id=>(S.parts.find(p=>p.id===id)||{name:"(ลบแล้ว)"}).name;
-const tabs=[["sum","📊","สรุป"],["jobs","📱","งานซ่อม"],["cust","👤","ลูกค้า"],["parts","🔩","อะไหล่"],["led","💰","รายรับ-จ่าย"]];
+const tabs=[["sum","📊","สรุป"],["jobs","📱","งานซ่อม"],["cust","👤","ลูกค้า"],["parts","🔩","อะไหล่"],["led","💰","รายรับ-จ่าย"],["team","👥","ทีมงาน"]];
 function months(){const s=new Set([today().slice(0,7)]);[...S.jobs,...S.trx,...S.led].forEach(x=>x.date&&s.add(x.date.slice(0,7)));
  $("#mon").innerHTML='<option value="all">ทั้งหมด</option>'+[...s].sort().reverse().map(m=>`<option ${m===M?"selected":""}>${m}</option>`).join("");$("#mon").value=M}
 const $=s=>document.querySelector(s);
+let ME={role:"owner"},TEAM=[];
 function R(){save();months();
- $("#nav").innerHTML=tabs.map(t=>`<button class="${T===t[0]?"on":""}" onclick="T='${t[0]}';R()"><b>${t[1]}</b>${t[2]}</button>`).join("");
- $("#app").innerHTML=({sum:vSum,jobs:vJobs,cust:vCust,parts:vParts,led:vLed})[T]()}
+ const vis=tabs.filter(t=>ME.role==="owner"||(t[0]!=="sum"&&t[0]!=="team"));
+ $("#nav").innerHTML=vis.map(t=>`<button class="${T===t[0]?"on":""}" onclick="go('${t[0]}')"><b>${t[1]}</b>${t[2]}</button>`).join("");
+ $("#app").innerHTML=({sum:vSum,jobs:vJobs,cust:vCust,parts:vParts,led:vLed,team:vTeam})[T]()}
+function go(t){T=t;R();if(t==="team")loadTeam()}
+async function loadTeam(){const {data}=await sb.from("profiles").select("*").order("created_at");TEAM=data||[];if(T==="team")R()}
+async function adm(b){const {data,error}=await sb.functions.invoke("staff-admin",{body:b});
+ let m=data&&data.error;if(error){m=error.message;try{m=(await error.context.json()).error||m}catch(e){}}
+ if(m){alert(m);return false}await loadTeam();return true}
+function vTeam(){return `<div class="bar"><button class="pr" onclick="fStaff()">+ เพิ่มพนักงาน</button></div>`+(TEAM.length?TEAM.map(p=>`<div class="card"><div class="row"><b>${esc(p.name)}</b><span class="tag">${p.role==="owner"?"เจ้าของ":"พนักงาน"}${p.active?"":" · ปิดใช้งาน"}</span></div><div class="s">${esc(p.email)}</div>${p.user_id===ME.user_id?"":`<div class="row"><button class="gh" onclick="fPw('${p.user_id}')">เปลี่ยนรหัสผ่าน</button><button class="sm" style="display:inline-block" onclick="adm({action:'set_active',user_id:'${p.user_id}',active:${!p.active}})">${p.active?"ปิดใช้งาน":"เปิดใช้งาน"}</button></div>`}</div>`).join(""):'<div class="empty">กำลังโหลด...</div>')}
+function fStaff(){form("เพิ่มพนักงาน",[{k:"name",l:"ชื่อพนักงาน"},{k:"email",l:"อีเมล (ใช้ล็อกอิน)",t:"email"},{k:"password",l:"รหัสผ่านเริ่มต้น (อย่างน้อย 6 ตัว)"},{k:"role",l:"สิทธิ์",o:[["staff","พนักงานหน้าร้าน"],["owner","เจ้าของ/ผู้จัดการ"]]}],v=>{if(!v.name||!v.email||v.password.length<6){alert("กรอกชื่อ อีเมล และรหัสผ่านให้ครบ");return false}adm({action:"create",...v})})}
+function fPw(id){form("เปลี่ยนรหัสผ่าน",[{k:"password",l:"รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"}],v=>{if(v.password.length<6)return false;adm({action:"reset_password",user_id:id,password:v.password})})}
 function vSum(){
  const jd=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.date)),sl=S.trx.filter(t=>t.type==="sell"&&inM(t.date)),bu=S.trx.filter(t=>t.type==="buy"&&inM(t.date)),li=S.led.filter(l=>l.type==="in"&&inM(l.date)),lo=S.led.filter(l=>l.type==="out"&&inM(l.date));
  const incJ=sum(jd,j=>j.price),costJ=sum(jd,j=>j.cost),incS=sum(sl,t=>t.qty*t.unit),profS=sum(sl,t=>t.qty*(t.unit-t.costAt)),pur=sum(bu,t=>t.qty*t.unit),incL=sum(li,l=>l.amt),outL=sum(lo,l=>l.amt);
