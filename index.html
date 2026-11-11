@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>บัญชีร้านซ่อมมือถือ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#1b2430;--mu:#6b7785;--bd:#e2e7ec;--pr:#2563eb;--in:#16a34a;--out:#dc2626;--wa:#d97706;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10151b;--card:#1a222b;--tx:#e8edf2;--mu:#8d9aa8;--bd:#2a3541;--pr:#60a5fa;--in:#4ade80;--out:#f87171;--wa:#fbbf24;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10151b;--card:#1a222b;--tx:#e8edf2;--mu:#8d9aa8;--bd:#2a3541;--pr:#60a5fa;--in:#4ade80;--out:#f87171;--wa:#fbbf24;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;font-size:15px;padding-bottom:70px}
+header{padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+h1{font-size:18px;margin:0}
+main{max-width:720px;margin:0 auto;padding:0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.k{color:var(--mu);font-size:12px}.v{font-size:20px;font-weight:700}
+.in{color:var(--in)}.out{color:var(--out)}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;background:none;color:var(--mu);padding:10px 2px;font:inherit;font-size:12px;cursor:pointer}
+nav button.on{color:var(--pr);font-weight:700}
+nav button b{display:block;font-size:18px}
+button.pr,button.sm{border:0;border-radius:8px;background:var(--pr);color:#fff;padding:9px 14px;font:inherit;cursor:pointer}
+button.sm{padding:4px 9px;font-size:12px;background:none;color:var(--out);border:1px solid var(--bd)}
+button.gh{background:none;color:var(--pr);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row+.row{margin-top:6px}
+.tag{font-size:11px;border-radius:99px;padding:2px 8px;border:1px solid var(--bd);color:var(--mu)}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+label{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}
+.mod{position:fixed;inset:0;background:#0007;display:none;align-items:flex-end;justify-content:center;z-index:9}
+.mod.show{display:flex}
+.mod>div{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px;max-height:88vh;overflow:auto}
+.empty{text-align:center;color:var(--mu);padding:24px}
+.bar{display:flex;gap:8px;margin:10px 0}
+.s{font-size:13px;color:var(--mu)}
+</style></head><body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<header><h1>🔧 บัญชีร้านซ่อมมือถือ</h1><div style="display:flex;gap:6px"><select id="mon" style="width:auto" onchange="M=this.value;R()"></select><button class="gh" id="out" onclick="logout()">ออก</button></div></header>
+<main id="app"></main>
+<nav id="nav"></nav>
+<div class="mod" id="mod"><div id="mbody"></div></div>
+<script>
+/* ===== ตั้งค่า Supabase: Project Settings > API ===== */
+const SUPABASE_URL="https://YOUR-PROJECT.supabase.co";
+const SUPABASE_KEY="YOUR-ANON-PUBLIC-KEY";
+/* ================================================== */
+const def={cust:[],jobs:[],parts:[],trx:[],led:[]};
+const KINDS=Object.keys(def);
+let S=JSON.parse(JSON.stringify(def)),snap=new Map(),busy=false,again=false,tm;
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+async function loadAll(){
+ const N={cust:[],jobs:[],parts:[],trx:[],led:[]};snap=new Map();
+ for(let from=0;;from+=1000){
+  const {data,error}=await sb.from("shop_data").select("id,kind,data").order("id").range(from,from+999);
+  if(error){alert("โหลดข้อมูลไม่สำเร็จ: "+error.message);break}
+  data.forEach(r=>{if(N[r.kind]){N[r.kind].push(r.data);snap.set(r.id,JSON.stringify(r.data))}});
+  if(data.length<1000)break}
+ S=N}
+async function save(){
+ if(busy){again=true;return}busy=true;
+ try{
+  const cur=new Map();KINDS.forEach(k=>S[k].forEach(x=>cur.set(x.id,{id:x.id,kind:k,data:x})));
+  const up=[...cur.values()].filter(r=>snap.get(r.id)!==JSON.stringify(r.data));
+  const del=[...snap.keys()].filter(id=>!cur.has(id));
+  if(up.length){const {error}=await sb.from("shop_data").upsert(up);if(error)throw error;up.forEach(r=>snap.set(r.id,JSON.stringify(r.data)))}
+  if(del.length){const {error}=await sb.from("shop_data").delete().in("id",del);if(error)throw error;del.forEach(id=>snap.delete(id))}
+ }catch(e){alert("บันทึกไม่สำเร็จ: "+(e.message||e))}
+ busy=false;if(again){again=false;save()}}
+function loginView(){$("#nav").innerHTML="";$("#out").style.display="none";
+ $("#app").innerHTML=`<div class="card"><b>เข้าสู่ระบบ</b><label>อีเมล</label><input id="em" type="email" autocomplete="username"><label>รหัสผ่าน</label><input id="pw" type="password" autocomplete="current-password"><div class="bar"><button class="pr" onclick="login()">เข้าสู่ระบบ</button></div><div class="s out" id="err"></div></div>`}
+async function login(){const {error}=await sb.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});if(error)$("#err").textContent=error.message;else location.reload()}
+async function logout(){await sb.auth.signOut();location.reload()}
+async function init(){
+ if(SUPABASE_URL.includes("YOUR-")){$("#app").innerHTML='<div class="card">ยังไม่ได้ตั้งค่า SUPABASE_URL และ SUPABASE_KEY ในไฟล์ (ดูหัวสคริปต์)</div>';return}
+ const {data}=await sb.auth.getSession();
+ if(!data.session){loginView();return}
+ await loadAll();R();
+ sb.channel("shop").on("postgres_changes",{event:"*",schema:"public",table:"shop_data"},()=>{
+  clearTimeout(tm);tm=setTimeout(async()=>{if(!$("#mod").classList.contains("show")&&!busy){await loadAll();R()}},700)}).subscribe()}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const f=n=>Number(n||0).toLocaleString("th-TH",{maximumFractionDigits:2});
+const today=()=>new Date().toISOString().slice(0,10);
+const sum=(a,fn)=>a.reduce((s,x)=>s+fn(x),0);
+const STAT=["รับเครื่อง","กำลังซ่อม","ซ่อมเสร็จ","รับเครื่องแล้ว"];
+let M=today().slice(0,7),T="sum";
+const inM=d=>M==="all"||(d||"").startsWith(M);
+const cn=id=>(S.cust.find(c=>c.id===id)||{name:"ลูกค้าทั่วไป"}).name;
+const pn=id=>(S.parts.find(p=>p.id===id)||{name:"(ลบแล้ว)"}).name;
+const tabs=[["sum","📊","สรุป"],["jobs","📱","งานซ่อม"],["cust","👤","ลูกค้า"],["parts","🔩","อะไหล่"],["led","💰","รายรับ-จ่าย"]];
+function months(){const s=new Set([today().slice(0,7)]);[...S.jobs,...S.trx,...S.led].forEach(x=>x.date&&s.add(x.date.slice(0,7)));
+ $("#mon").innerHTML='<option value="all">ทั้งหมด</option>'+[...s].sort().reverse().map(m=>`<option ${m===M?"selected":""}>${m}</option>`).join("");$("#mon").value=M}
+const $=s=>document.querySelector(s);
+function R(){save();months();
+ $("#nav").innerHTML=tabs.map(t=>`<button class="${T===t[0]?"on":""}" onclick="T='${t[0]}';R()"><b>${t[1]}</b>${t[2]}</button>`).join("");
+ $("#app").innerHTML=({sum:vSum,jobs:vJobs,cust:vCust,parts:vParts,led:vLed})[T]()}
+function vSum(){
+ const jd=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.date)),sl=S.trx.filter(t=>t.type==="sell"&&inM(t.date)),bu=S.trx.filter(t=>t.type==="buy"&&inM(t.date)),li=S.led.filter(l=>l.type==="in"&&inM(l.date)),lo=S.led.filter(l=>l.type==="out"&&inM(l.date));
+ const incJ=sum(jd,j=>j.price),costJ=sum(jd,j=>j.cost),incS=sum(sl,t=>t.qty*t.unit),profS=sum(sl,t=>t.qty*(t.unit-t.costAt)),pur=sum(bu,t=>t.qty*t.unit),incL=sum(li,l=>l.amt),outL=sum(lo,l=>l.amt);
+ const inc=incJ+incS+incL,exp=costJ+pur+outL,net=inc-exp;
+ const stock=sum(S.parts,p=>p.qty*p.cost);
+ const pend=S.jobs.filter(j=>j.status!=="รับเครื่องแล้ว").length;
+ return `<div class="grid"><div class="card"><div class="k">รายรับรวม</div><div class="v in">฿${f(inc)}</div></div><div class="card"><div class="k">รายจ่ายรวม</div><div class="v out">฿${f(exp)}</div></div></div>
+ <div class="card"><div class="k">กำไรสุทธิ (รับ − จ่าย)</div><div class="v ${net>=0?"in":"out"}">฿${f(net)}</div></div>
+ <div class="card"><b>รายละเอียด</b>
+ <div class="row"><span>ค่าซ่อม (${jd.length} งาน)</span><span class="in">+${f(incJ)}</span></div>
+ <div class="row"><span>ขายอะไหล่</span><span class="in">+${f(incS)}</span></div>
+ <div class="row"><span>รายรับอื่นๆ</span><span class="in">+${f(incL)}</span></div>
+ <div class="row"><span>ต้นทุนอะไหล่ในงานซ่อม</span><span class="out">−${f(costJ)}</span></div>
+ <div class="row"><span>ซื้ออะไหล่เข้าสต๊อก</span><span class="out">−${f(pur)}</span></div>
+ <div class="row"><span>รายจ่ายอื่นๆ (ค่าเช่า ค่าไฟ ฯลฯ)</span><span class="out">−${f(outL)}</span></div></div>
+ <div class="grid"><div class="card"><div class="k">กำไรจากการขายอะไหล่</div><div class="v">฿${f(profS)}</div></div><div class="card"><div class="k">กำไรจากงานซ่อม</div><div class="v">฿${f(incJ-costJ)}</div></div>
+ <div class="card"><div class="k">มูลค่าสต๊อกอะไหล่</div><div class="v">฿${f(stock)}</div></div><div class="card"><div class="k">งานค้าง</div><div class="v">${pend} งาน</div></div></div>
+ <p class="s">หมายเหตุ: นับรายรับค่าซ่อมเมื่อสถานะเป็น "รับเครื่องแล้ว" และนับการซื้ออะไหล่เป็นรายจ่ายตอนซื้อ (ระบบเงินสด) ข้อมูลเก็บบน Supabase ซิงค์ทุกเครื่องอัตโนมัติ</p>
+ <div class="bar"><button class="gh" onclick="exp_()">⬇ สำรองข้อมูล</button><button class="gh" onclick="imp_()">⬆ นำเข้า</button></div>`}
+function vJobs(){const a=S.jobs.filter(j=>inM(j.date)).sort((x,y)=>y.date.localeCompare(x.date));
+ return `<div class="bar"><button class="pr" onclick="fJob()">+ รับงานซ่อม</button></div>`+(a.length?a.map(j=>`<div class="card"><div class="row"><b>${esc(j.device)}</b><span class="tag">${j.date}</span></div>
+ <div class="s">${esc(cn(j.cust))} · ${esc(j.issue||"-")}</div>
+ <div class="row"><span>ค่าซ่อม <b>฿${f(j.price)}</b> · ต้นทุน ฿${f(j.cost)}</span><b class="in">กำไร ${f(j.price-j.cost)}</b></div>
+ <div class="row"><select style="width:auto" onchange="jst('${j.id}',this.value)">${STAT.map(s=>`<option ${s===j.status?"selected":""}>${s}</option>`).join("")}</select><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></div></div>`).join(""):'<div class="empty">ยังไม่มีงานซ่อมในช่วงนี้</div>')}
+function vCust(){return `<div class="bar"><button class="pr" onclick="fCust()">+ เพิ่มลูกค้า</button></div>`+(S.cust.length?S.cust.map(c=>{const js=S.jobs.filter(j=>j.cust===c.id);return `<div class="card"><div class="row"><b>${esc(c.name)}</b><a href="tel:${esc(c.phone)}" class="tag">📞 ${esc(c.phone||"-")}</a></div>
+ <div class="s">${esc(c.note||"")}</div><div class="row"><span class="s">เคยซ่อม ${js.length} ครั้ง · ยอดรวม ฿${f(sum(js,j=>j.price))}</span><button class="sm" onclick="del('cust','${c.id}')">ลบ</button></div></div>`}).join(""):'<div class="empty">ยังไม่มีข้อมูลลูกค้า</div>')}
+function vParts(){const h=S.trx.filter(t=>inM(t.date)).sort((x,y)=>y.date.localeCompare(x.date));
+ return `<div class="bar"><button class="pr" onclick="fPart()">+ อะไหล่ใหม่</button><button class="gh" onclick="fTrx('buy')">ซื้อเข้า</button><button class="gh" onclick="fTrx('sell')">ขายออก</button></div>
+ <b>สต๊อกอะไหล่</b>`+(S.parts.length?S.parts.map(p=>`<div class="card"><div class="row"><b>${esc(p.name)}</b><span class="tag" style="${p.qty<=2?"color:var(--wa)":""}">คงเหลือ ${p.qty}</span></div>
+ <div class="row"><span class="s">ทุนเฉลี่ย ฿${f(p.cost)} · ราคาขาย ฿${f(p.price)}</span><button class="sm" onclick="del('parts','${p.id}')">ลบ</button></div></div>`).join(""):'<div class="empty">ยังไม่มีอะไหล่</div>')+
+ `<br><b>ประวัติซื้อ-ขาย</b>`+(h.length?h.map(t=>`<div class="card"><div class="row"><span>${t.type==="buy"?"🛒 ซื้อ":"💵 ขาย"} ${esc(pn(t.pid))} ×${t.qty}</span><b class="${t.type==="buy"?"out":"in"}">${t.type==="buy"?"−":"+"}${f(t.qty*t.unit)}</b></div>
+ <div class="row"><span class="s">${t.date}${t.type==="sell"?` · กำไร ฿${f(t.qty*(t.unit-t.costAt))}`:""}</span><button class="sm" onclick="delT('${t.id}')">ลบ</button></div></div>`).join(""):'<div class="empty">ไม่มีรายการ</div>')}
+function vLed(){const a=S.led.filter(l=>inM(l.date)).sort((x,y)=>y.date.localeCompare(x.date));
+ return `<div class="bar"><button class="pr" onclick="fLed('in')">+ รายรับ</button><button class="gh" onclick="fLed('out')">+ รายจ่าย</button></div>`+(a.length?a.map(l=>`<div class="card"><div class="row"><span>${esc(l.cat)} <span class="s">${esc(l.note||"")}</span></span><b class="${l.type}">${l.type==="in"?"+":"−"}${f(l.amt)}</b></div>
+ <div class="row"><span class="s">${l.date}</span><button class="sm" onclick="del('led','${l.id}')">ลบ</button></div></div>`).join(""):'<div class="empty">ยังไม่มีรายการในช่วงนี้</div>')+'<p class="s">รายการรับ-จ่ายที่มาจากงานซ่อมและอะไหล่ จะรวมในหน้าสรุปอัตโนมัติ</p>'}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function form(title,fields,ok){
+ $("#mbody").innerHTML=`<b>${title}</b>`+fields.map(x=>`<label>${x.l}</label>`+(x.o?`<select id="f_${x.k}">${x.o.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join("")}</select>`:`<input id="f_${x.k}" type="${x.t||"text"}" value="${esc(x.v??"")}" inputmode="${x.t==="number"?"decimal":"text"}">`)).join("")+
+ `<div class="bar"><button class="pr" id="fok">บันทึก</button><button class="gh" onclick="closeM()">ยกเลิก</button></div>`;
+ $("#mod").classList.add("show");
+ $("#fok").onclick=()=>{const v={};fields.forEach(x=>{const e=$("#f_"+x.k).value;v[x.k]=x.t==="number"?(parseFloat(e)||0):e.trim()});if(ok(v)!==false)closeM()}}
+function closeM(){$("#mod").classList.remove("show");R()}
+$("#mod").onclick=e=>{if(e.target.id==="mod")closeM()};
+const custOpts=()=>[["","ลูกค้าทั่วไป"],...S.cust.map(c=>[c.id,c.name])];
+const partOpts=()=>S.parts.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`]);
+function fCust(){form("เพิ่มลูกค้า",[{k:"name",l:"ชื่อ"},{k:"phone",l:"เบอร์โทร",t:"tel"},{k:"note",l:"หมายเหตุ"}],v=>{if(!v.name)return false;S.cust.push({id:uid(),...v})})}
+function fJob(){form("รับงานซ่อม",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cust",l:"ลูกค้า",o:custOpts()},{k:"device",l:"รุ่นเครื่อง"},{k:"issue",l:"อาการเสีย"},{k:"price",l:"ค่าซ่อม (บาท)",t:"number"},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number"}],v=>{if(!v.device)return false;S.jobs.push({id:uid(),status:"รับเครื่อง",...v})})}
+function fPart(){form("อะไหล่ใหม่",[{k:"name",l:"ชื่ออะไหล่"},{k:"price",l:"ราคาขาย (บาท)",t:"number"}],v=>{if(!v.name)return false;S.parts.push({id:uid(),name:v.name,qty:0,cost:0,price:v.price})})}
+function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่ก่อน");return}const p0=S.parts[0];
+ form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:type==="sell"?p0.price:""}],v=>{
+  const p=S.parts.find(x=>x.id===v.pid);if(!p||v.qty<=0)return false;
+  if(type==="buy"){p.cost=(p.qty*p.cost+v.qty*v.unit)/(p.qty+v.qty);p.qty+=v.qty;if(!p.price)p.price=v.unit*1.5}
+  else{if(v.qty>p.qty){alert("สต๊อกไม่พอ");return false}p.qty-=v.qty}
+  S.trx.push({id:uid(),type,date:v.date,pid:v.pid,qty:v.qty,unit:v.unit,costAt:p.cost})})}
+function fLed(type){form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","อื่นๆ"]:["ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},{k:"note",l:"รายละเอียด"}],v=>{if(!v.amt)return false;S.led.push({id:uid(),type,...v})})}
+function jst(id,s){S.jobs.find(j=>j.id===id).status=s;R()}
+function del(k,id){if(confirm("ลบรายการนี้?")){S[k]=S[k].filter(x=>x.id!==id);R()}}
+function delT(id){const t=S.trx.find(x=>x.id===id),p=S.parts.find(x=>x.id===t.pid);
+ if(!confirm("ลบรายการนี้? (ปรับสต๊อกกลับให้)"))return;
+ if(p){if(t.type==="sell")p.qty+=t.qty;else p.qty=Math.max(0,p.qty-t.qty)}
+ S.trx=S.trx.filter(x=>x.id!==id);R()}
+function exp_(){const t=JSON.stringify(S);form("สำรองข้อมูล (คัดลอกข้อความนี้เก็บไว้)",[],()=>{});$("#mbody").insertAdjacentHTML("afterbegin","");
+ $("#mbody").innerHTML=`<b>สำรองข้อมูล</b><label>คัดลอกข้อความทั้งหมดไปเก็บไว้</label><textarea rows="8" readonly onclick="this.select()">${esc(t)}</textarea><div class="bar"><button class="gh" onclick="closeM()">ปิด</button></div>`}
+function imp_(){$("#mbody").innerHTML=`<b>นำเข้าข้อมูล</b><label>วางข้อความสำรองที่นี่ (จะแทนที่ข้อมูลปัจจุบัน)</label><textarea id="imp" rows="8"></textarea><div class="bar"><button class="pr" onclick="doImp()">นำเข้า</button><button class="gh" onclick="closeM()">ยกเลิก</button></div>`;$("#mod").classList.add("show")}
+function doImp(){try{const d=JSON.parse($("#imp").value);if(!d.jobs||!d.parts)throw 0;S=Object.assign({},def,d);closeM()}catch(e){alert("ข้อมูลไม่ถูกต้อง")}}
+init();
+</script></body></html>
