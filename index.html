@@ -212,7 +212,7 @@ function vSum(){
  <div class="foot"><button class="lk" onclick="exp_()">สำรองข้อมูล</button><button class="lk" onclick="imp_()">นำเข้าข้อมูล</button></div>`}
 const tk=j=>{const i=Math.max(0,STAT.indexOf(j.status)),lk=S.led.filter(l=>l.job===j.id),lin=sum(lk.filter(l=>l.type==="in"),l=>l.amt),lout=sum(lk.filter(l=>l.type==="out"),l=>l.amt);return `<article class="tk st${i}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${cph(j)?` <a href="tel:${esc(cph(j))}" style="color:inherit">${esc(cph(j))}</a>`:""}</span></div><div class="amt">฿${f(j.price)}<small class="pf">กำไร ${f(j.price+lin-j.cost-lout)}</small></div></div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}${lk.length?`<p class="s pf" style="margin:6px 0 0">รายการที่เชื่อมกับงานนี้ ${lk.length} รายการ จ่าย ฿${f(lout)} รับ ฿${f(lin)}</p>`:""}${j.detail?`<p class="s" style="margin:4px 0 0">${esc(j.detail)}</p>`:""}${j.pass?`<button class="chip" style="margin-top:8px;padding:3px 10px;font-size:12px" data-p="${esc(j.pass)}" onclick="rv(this)">รหัสเครื่อง ••••</button>`:""}
  <div class="rail">${STAT.map((s,k)=>`<button class="rs${k<=i?" on":""}${k===i?" cur":""}" onclick="jst('${j.id}','${s}')"><i></i><span>${s}</span></button>`).join("")}</div>
- <div class="tk-f"><span class="s">รับเครื่อง ${thD(j.date)}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('out','${j.id}')">+ รายจ่าย</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('in','${j.id}')">+ รายรับ</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
+ <div class="tk-f"><span class="s">รับเครื่อง ${thD(j.date)}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('out','${j.id}')">+ รายจ่าย</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('in','${j.id}')">+ รายรับ</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
 function vJobs(){const all=S.jobs.filter(j=>inM(j.date)),open=all.filter(j=>j.status!=="รับเครื่องแล้ว"),done=all.filter(j=>j.status==="รับเครื่องแล้ว");
  const a=(JF==="open"?open:JF==="done"?done:all).slice().sort((x,y)=>y.date.localeCompare(x.date));
  const chip=(k,l,n)=>`<button class="chip${JF===k?" on":""}" onclick="JF='${k}';R()">${l} <b>${n}</b></button>`;
@@ -248,12 +248,13 @@ $("#mod").onclick=e=>{if(e.target.id==="mod")closeM()};
 const custOpts=()=>[["","ลูกค้าทั่วไป"],...S.cust.map(c=>[c.id,c.name])];
 const partOpts=()=>S.parts.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`]);
 function fCust(){form("เพิ่มลูกค้า",[{k:"name",l:"ชื่อ"},{k:"phone",l:"เบอร์โทร",t:"tel"},{k:"note",l:"หมายเหตุ"}],v=>{if(!v.name)return false;S.cust.push({id:uid(),...v})})}
-function fJob(){
- form("รับงานซ่อม",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cust",l:"ลูกค้า",o:custOpts()},{k:"name",l:"ชื่อลูกค้า (ลูกค้าทั่วไป)"},{k:"phone",l:"เบอร์ติดต่อ",t:"tel"},{k:"device",l:"รุ่นเครื่อง"},{k:"issue",l:"อาการเสีย"},{k:"detail",l:"รายละเอียดเพิ่มเติม",t:"textarea"},{k:"pass",l:"รหัสผ่าน / รหัสปลดล็อกเครื่อง (ถ้ามี)"},{k:"price",l:"ค่าซ่อม (บาท)",t:"number"},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number"}],
- v=>{if(!v.device)return false;const {name,phone,...r}=v;if(!r.cust){if(name)r.cname=name;if(phone)r.cphone=phone}S.jobs.push({id:uid(),status:"รับเครื่อง",...r})});
+function fJob(id){const e=id?S.jobs.find(j=>j.id===id):null,g=k=>e&&e[k]!=null?e[k]:undefined;
+ form(e?"แก้ไขงานซ่อม":"รับงานซ่อม",[{k:"date",l:"วันที่",t:"date",v:e?e.date:today()},{k:"cust",l:"ลูกค้า",v:e?e.cust:"",o:custOpts()},{k:"name",l:"ชื่อลูกค้า (ลูกค้าทั่วไป)",v:g("cname")},{k:"phone",l:"เบอร์ติดต่อ",t:"tel",v:g("cphone")},{k:"device",l:"รุ่นเครื่อง",v:g("device")},{k:"issue",l:"อาการเสีย",v:g("issue")},{k:"detail",l:"รายละเอียดเพิ่มเติม",t:"textarea",v:g("detail")},{k:"pass",l:"รหัสผ่าน / รหัสปลดล็อกเครื่อง (ถ้ามี)",v:g("pass")},{k:"price",l:"ค่าซ่อม (บาท)",t:"number",v:g("price")},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number",v:g("cost")}],
+ v=>{if(!v.device)return false;const {name,phone,...r}=v;if(!r.cust){if(name)r.cname=name;if(phone)r.cphone=phone}
+  if(e){delete e.cname;delete e.cphone;Object.assign(e,r)}else S.jobs.push({id:uid(),status:"รับเครื่อง",...r})});
  const sel=$("#f_cust"),nm=$("#f_name"),ph=$("#f_phone"),btn=document.createElement("button");
  btn.type="button";btn.className="gh";btn.style.marginTop="10px";btn.textContent="+ เพิ่มไปยังรายการลูกค้า";ph.after(btn);
- const sync=()=>{const g=!sel.value;[nm,ph].forEach(e=>{e.style.display=g?"":"none";e.previousElementSibling.style.display=g?"":"none"});btn.style.display=g?"":"none"};
+ const sync=()=>{const g=!sel.value;[nm,ph].forEach(x=>{x.style.display=g?"":"none";x.previousElementSibling.style.display=g?"":"none"});btn.style.display=g?"":"none"};
  sel.onchange=sync;sync();
  btn.onclick=()=>{const n=nm.value.trim();if(!n){nm.focus();nm.style.borderColor="var(--out)";return}
   const c={id:uid(),name:n,phone:ph.value.trim()};S.cust.push(c);
