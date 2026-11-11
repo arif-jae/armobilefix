@@ -93,12 +93,17 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 .fab{position:fixed;z-index:6;right:max(16px,calc((100vw - 760px)/2 + 16px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--ac);color:var(--ac-ink);display:none;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.28)}
 .fab:active{transform:scale(.94)}
 .mi{width:100%;border:0;background:none;color:var(--tx);text-align:left;cursor:pointer;min-height:54px}
+.wd{text-align:right;line-height:1.1;flex:none}.wd b{font:700 32px Prompt,sans-serif;display:block}.wd span{font-size:11px;color:var(--mu)}
+.wb{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:99px;border:1px solid var(--bd);font-size:12px;font-weight:600;color:var(--tx)}.wb::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.wbar{height:6px;border-radius:99px;background:var(--bd);margin-top:12px;overflow:hidden}.wbar i{display:block;height:100%;background:var(--c)}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:99px;font-size:13px;z-index:8;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center}.toast.on{opacity:1}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
 <header><div class="brand"><span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 8.5l5 5M14.5 8.5l-5 5"/></svg></span><div><h1>ร้านซ่อมมือถือ</h1><div class="who" id="who"></div></div></div><div class="hr"><select id="mon" onchange="M=this.value;R()" aria-label="เลือกเดือน"></select><button class="ib" id="pwb" onclick="fMyPw()" title="เปลี่ยนรหัสผ่านของฉัน" aria-label="เปลี่ยนรหัสผ่านของฉัน"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg></button><button class="ib" id="out" onclick="logout()" title="ออกจากระบบ" aria-label="ออกจากระบบ"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></svg></button></div></header>
 <main id="app"></main>
 <button class="fab" id="fab" onclick="fabGo()" aria-label="เพิ่มรายการ"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<div class="toast" id="toast" role="status"></div>
 <nav id="nav"></nav>
 <div class="mod" id="mod"><div id="mbody"></div></div>
 <script>
@@ -145,9 +150,9 @@ async function init(){
   clearTimeout(tm);tm=setTimeout(async()=>{if(!$("#mod").classList.contains("show")&&!busy){await loadAll();R()}},700)}).subscribe()}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const f=n=>Number(n||0).toLocaleString("th-TH",{maximumFractionDigits:2});
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const x=new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
 const sum=(a,fn)=>a.reduce((s,x)=>s+fn(x),0);
-const I={sum:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',jobs:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',cust:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2.2.7 3.5 2.6 3.5 5.5"/>',parts:'<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',led:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l2-3h12l2 3M16 14h2"/>',team:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2M15 10h3M15 14h3"/>',plus:'<path d="M12 5v14M5 12h14"/>',phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',down:'<path d="M12 5v14M6 13l6 6 6-6"/>',up:'<path d="M12 19V5M6 11l6-6 6 6"/>'};
+const I={sum:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',jobs:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',cust:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2.2.7 3.5 2.6 3.5 5.5"/>',parts:'<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',led:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l2-3h12l2 3M16 14h2"/>',team:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2M15 10h3M15 14h3"/>',warr:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',plus:'<path d="M12 5v14M5 12h14"/>',phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',down:'<path d="M12 5v14M6 13l6 6 6-6"/>',up:'<path d="M12 19V5M6 11l6-6 6 6"/>'};
 const ic=(n,z=20)=>`<svg class="ic" width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 const thM=m=>m==="all"?"ทุกช่วงเวลา":new Date(m+"-01T00:00").toLocaleDateString("th-TH",{month:"long",year:"numeric"});
 const thS=m=>new Date(m+"-01T00:00").toLocaleDateString("th-TH",{month:"short",year:"numeric"});
@@ -164,7 +169,7 @@ const cnj=j=>j.cust?cn(j.cust):(j.cname||"ลูกค้าทั่วไป")
 const cph=j=>j.cust?((S.cust.find(c=>c.id===j.cust)||{}).phone||""):(j.cphone||"");
 function rv(b){if(b.dataset.on){delete b.dataset.on;b.textContent="รหัสเครื่อง ••••"}else{b.dataset.on=1;b.textContent="รหัสเครื่อง "+b.dataset.p}}
 const pn=id=>(S.parts.find(p=>p.id===id)||{name:"(ลบแล้ว)"}).name;
-const tabs=[["sum","sum","สรุป"],["jobs","jobs","งานซ่อม"],["cust","cust","ลูกค้า"],["parts","parts","อะไหล่"],["led","led","รายรับ-จ่าย"],["team","team","ทีมงาน"]];
+const tabs=[["sum","sum","สรุป"],["jobs","jobs","งานซ่อม"],["warr","warr","ประกัน"],["cust","cust","ลูกค้า"],["parts","parts","อะไหล่"],["led","led","รับ-จ่าย"],["team","team","ทีมงาน"]];
 function months(){const s=new Set([today().slice(0,7)]);[...S.jobs,...S.trx,...S.led].forEach(x=>x.date&&s.add(x.date.slice(0,7)));
  $("#mon").innerHTML='<option value="all">ทุกเดือน</option>'+[...s].sort().reverse().map(m=>`<option value="${m}" ${m===M?"selected":""}>${thS(m)}</option>`).join("");$("#mon").value=M}
 const $=s=>document.querySelector(s);
@@ -172,7 +177,7 @@ let ME={role:"owner"},TEAM=[];
 function R(){save();months();
  const vis=tabs.filter(t=>ME.role==="owner"||(t[0]!=="sum"&&t[0]!=="team"));
  $("#nav").innerHTML=vis.map(t=>`<button class="${T===t[0]?"on":""}" onclick="go('${t[0]}')">${ic(t[1],22)}<span>${t[2]}</span></button>`).join("");
- $("#app").innerHTML=({sum:vSum,jobs:vJobs,cust:vCust,parts:vParts,led:vLed,team:vTeam})[T]();$("#fab").style.display=T==="sum"?"none":"grid"}
+ $("#app").innerHTML=({sum:vSum,jobs:vJobs,cust:vCust,parts:vParts,led:vLed,team:vTeam,warr:vWarr})[T]();$("#fab").style.display=T==="sum"||T==="warr"?"none":"grid";$("#mon").style.visibility=["sum","parts","led"].includes(T)?"visible":"hidden"}
 let MENU=[];
 function menu(title,items){MENU=items.map(i=>i[1]);$("#mbody").innerHTML=`<div class="grab"></div><h2>${title}</h2><div class="list" style="margin-top:10px">${items.map((i,k)=>`<button class="li mi" onclick="mi(${k})"><span class="tg ${i[2]}">${ic(i[3],16)}</span><b>${i[0]}</b></button>`).join("")}</div><div class="bar"><button class="gh" onclick="closeM()">ยกเลิก</button></div>`;$("#mod").classList.add("show")}
 function mi(k){$("#mod").classList.remove("show");MENU[k]()}
@@ -213,11 +218,24 @@ function vSum(){
 const tk=j=>{const i=Math.max(0,STAT.indexOf(j.status)),lk=S.led.filter(l=>l.job===j.id),lin=sum(lk.filter(l=>l.type==="in"),l=>l.amt),lout=sum(lk.filter(l=>l.type==="out"),l=>l.amt);return `<article class="tk st${i}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${cph(j)?` <a href="tel:${esc(cph(j))}" style="color:inherit">${esc(cph(j))}</a>`:""}</span></div><div class="amt">฿${f(j.price)}<small class="pf">กำไร ${f(j.price+lin-j.cost-lout)}</small></div></div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}${lk.length?`<p class="s pf" style="margin:6px 0 0">รายการที่เชื่อมกับงานนี้ ${lk.length} รายการ จ่าย ฿${f(lout)} รับ ฿${f(lin)}</p>`:""}${j.detail?`<p class="s" style="margin:4px 0 0">${esc(j.detail)}</p>`:""}${j.pass?`<button class="chip" style="margin-top:8px;padding:3px 10px;font-size:12px" data-p="${esc(j.pass)}" onclick="rv(this)">รหัสเครื่อง ••••</button>`:""}
  <div class="rail">${STAT.map((s,k)=>`<button class="rs${k<=i?" on":""}${k===i?" cur":""}" onclick="jst('${j.id}','${s}')"><i></i><span>${s}</span></button>`).join("")}</div>
  <div class="tk-f"><div class="s">รับงาน ${thD(j.date)}${j.status==="รับเครื่องแล้ว"?`<span style="margin-left:14px">ลูกค้ามารับเครื่อง</span> <b style="color:var(--st3)">${thD(j.done||j.date)}</b>`:""}</div><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('out','${j.id}')">+ รายจ่าย</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('in','${j.id}')">+ รายรับ</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
-function vJobs(){const all=S.jobs.filter(j=>inM(j.date)),open=all.filter(j=>j.status!=="รับเครื่องแล้ว"),done=all.filter(j=>j.status==="รับเครื่องแล้ว");
- const a=(JF==="open"?open:JF==="done"?done:all).slice().sort((x,y)=>y.date.localeCompare(x.date));
- const chip=(k,l,n)=>`<button class="chip${JF===k?" on":""}" onclick="JF='${k}';R()">${l} <b>${n}</b></button>`;
+function vJobs(){const open=S.jobs.filter(j=>j.status!=="รับเครื่องแล้ว"),k=STAT.slice(0,3).includes(JF)?JF:"all";
+ const a=(k==="all"?open:open.filter(j=>j.status===k)).slice().sort((x,y)=>y.date.localeCompare(x.date));
+ const chip=(v,l,n)=>`<button class="chip${k===v?" on":""}" onclick="JF='${v}';R()">${l} <b>${n}</b></button>`;
  return `<div class="top"><h2 class="pt">งานซ่อม</h2></div>
- <div class="chips">${chip("all","ทั้งหมด",all.length)}${chip("open","ค้างอยู่",open.length)}${chip("done","รับเครื่องแล้ว",done.length)}</div>`+(a.length?a.map(tk).join(""):empty("ยังไม่มีงานซ่อมในรายการนี้","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกเครื่องที่ลูกค้านำมาซ่อม"))}
+ <div class="chips">${chip("all","ทั้งหมด",open.length)}${STAT.slice(0,3).map(s=>chip(s,s,open.filter(j=>j.status===s).length)).join("")}</div>`+(a.length?a.map(tk).join(""):empty("ไม่มีงานซ่อมที่ค้างอยู่","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกเครื่องที่ลูกค้านำมาซ่อม"))+'<p class="s">งานที่ลูกค้ามารับเครื่องแล้ว จะย้ายไปอยู่ที่เมนู “ประกัน”</p>'}
+const WD=30;
+const dayDiff=d=>Math.round((new Date(today()+"T00:00")-new Date(d+"T00:00"))/864e5);
+const addD=(d,n)=>{const x=new Date(d+"T00:00");x.setDate(x.getDate()+n);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+let WF="act";
+const wc=x=>{const j=x.j,d=x.d,ex=d>WD,left=WD-d,cls=ex?"st0":left<=7?"st1":"st3",dn=j.done||j.date,ph=cph(j);
+ return `<article class="tk ${cls}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${ph?` <a href="tel:${esc(ph)}" style="color:inherit">${esc(ph)}</a>`:""}</span><span class="wb" style="margin-top:8px;align-self:flex-start">${ex?`หมดประกัน เกิน ${d-WD} วัน`:left===0?"ในประกัน วันสุดท้าย":`ในประกัน เหลือ ${left} วัน`}</span></div><div class="wd"><b>${d}</b><span>วันนับจากรับเครื่อง</span></div></div>
+ <div class="wbar"><i style="width:${Math.min(100,Math.round(d/WD*100))}%"></i></div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}
+ <div class="tk-f"><div class="s">ลูกค้ามารับเครื่อง ${thD(dn)}<span style="margin-left:14px">ประกันถึง ${thD(addD(dn,WD))}</span></div><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="unpick('${j.id}')">ยกเลิกการรับเครื่อง</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
+function vWarr(){const all=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว").map(j=>({j,d:dayDiff(j.done||j.date)})),act=all.filter(x=>x.d<=WD),exp=all.filter(x=>x.d>WD);
+ const a=(WF==="exp"?exp:WF==="all"?all:act).slice().sort((x,y)=>WF==="act"?y.d-x.d:x.d-y.d);
+ const chip=(v,l,n)=>`<button class="chip${WF===v?" on":""}" onclick="WF='${v}';R()">${l} <b>${n}</b></button>`;
+ return `<div class="top"><h2 class="pt">ประกัน</h2></div><p class="s" style="margin:-6px 0 12px">ประกัน ${WD} วัน นับจากวันที่ลูกค้ามารับเครื่อง</p>
+ <div class="chips">${chip("act","ในประกัน",act.length)}${chip("exp","หมดประกัน",exp.length)}${chip("all","ทั้งหมด",all.length)}</div>`+(a.length?a.map(wc).join(""):empty(WF==="exp"?"ยังไม่มีงานที่หมดประกัน":"ไม่มีงานที่อยู่ในประกัน","เมื่อลูกค้ามารับเครื่อง ให้แตะสถานะ “รับเครื่องแล้ว” ในใบงานซ่อม งานจะมาอยู่ที่นี่"))}
 function cList(){const q=CQ.trim().toLowerCase(),a=S.cust.filter(c=>!q||(c.name+" "+(c.phone||"")).toLowerCase().includes(q));
  return a.length?`<div class="list">${a.map(c=>{const js=S.jobs.filter(j=>j.cust===c.id);return `<div class="li">${av(c.name)}<div class="grow"><b>${esc(c.name)}</b><span class="s">${js.length?`ซ่อมแล้ว ${js.length} ครั้ง ยอดรวม ฿${f(sum(js,j=>j.price))}`:"ยังไม่เคยซ่อม"}</span>${c.note?`<span class="s">${esc(c.note)}</span>`:""}</div><div class="acts">${c.phone?`<a class="ib" href="tel:${esc(c.phone)}" aria-label="โทรหา ${esc(c.name)}">${ic("phone",18)}</a>`:""}<button class="chip" style="padding:3px 10px;font-size:12px" onclick="fCust('${c.id}')">แก้ไข</button><button class="sm" onclick="del('cust','${c.id}')">ลบ</button></div></div>`}).join("")}</div>`:empty(q?"ไม่พบลูกค้าที่ค้นหา":"ยังไม่มีข้อมูลลูกค้า",q?"ลองค้นด้วยชื่ออื่นหรือเบอร์โทร":"กดปุ่ม + มุมขวาล่าง เพื่อเก็บชื่อและเบอร์โทรไว้ใช้ตอนรับงาน")}
 function vCust(){return `<div class="top"><h2 class="pt">ลูกค้า</h2></div><input class="srch" type="search" placeholder="ค้นหาชื่อหรือเบอร์โทร" value="${esc(CQ)}" oninput="CQ=this.value;$('#clist').innerHTML=cList()"><div id="clist">${cList()}</div>`}
@@ -269,7 +287,9 @@ function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่
   S.trx.push({id:uid(),type,date:v.date,pid:v.pid,qty:v.qty,unit:v.unit,costAt:p.cost})})}
 function fLed(type,job){const js=S.jobs.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
  form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","ค่าบริการเพิ่ม","อื่นๆ"]:["ค่าอะไหล่ซื้อนอก","ค่าแรงช่างนอก","ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},{k:"note",l:"รายละเอียด"},{k:"job",l:"เชื่อมกับงานซ่อม (ถ้ามี)",v:job||"",o:[["","ไม่เชื่อมกับงานซ่อม"],...js.map(j=>[j.id,`${j.device} (${cnj(j)})`])]}],v=>{if(!v.amt)return false;if(!v.job)delete v.job;S.led.push({id:uid(),type,...v})})}
-function jst(id,s){const j=S.jobs.find(x=>x.id===id);j.status=s;if(s==="รับเครื่องแล้ว")j.done=j.done||today();else delete j.done;R()}
+let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
+function jst(id,s){const j=S.jobs.find(x=>x.id===id);j.status=s;if(s==="รับเครื่องแล้ว"){j.done=j.done||today();toast("ย้ายไปที่เมนู “ประกัน” แล้ว นับ 30 วันจากวันนี้")}else delete j.done;R()}
+function unpick(id){if(!confirm("ยกเลิกการรับเครื่อง? งานจะกลับไปอยู่ในรายการงานซ่อม (สถานะ ซ่อมเสร็จ)"))return;const j=S.jobs.find(x=>x.id===id);j.status="ซ่อมเสร็จ";delete j.done;R()}
 function del(k,id){if(confirm("ลบรายการนี้?")){S[k]=S[k].filter(x=>x.id!==id);R()}}
 function delT(id){const t=S.trx.find(x=>x.id===id),p=S.parts.find(x=>x.id===t.pid);
  if(!confirm("ลบรายการนี้? (ปรับสต๊อกกลับให้)"))return;
