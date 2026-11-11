@@ -160,6 +160,9 @@ const STAT=["รับเครื่อง","กำลังซ่อม","ซ�
 let M=today().slice(0,7),T="sum";
 const inM=d=>M==="all"||(d||"").startsWith(M);
 const cn=id=>(S.cust.find(c=>c.id===id)||{name:"ลูกค้าทั่วไป"}).name;
+const cnj=j=>j.cust?cn(j.cust):(j.cname||"ลูกค้าทั่วไป");
+const cph=j=>j.cust?((S.cust.find(c=>c.id===j.cust)||{}).phone||""):(j.cphone||"");
+function rv(b){if(b.dataset.on){delete b.dataset.on;b.textContent="รหัสเครื่อง ••••"}else{b.dataset.on=1;b.textContent="รหัสเครื่อง "+b.dataset.p}}
 const pn=id=>(S.parts.find(p=>p.id===id)||{name:"(ลบแล้ว)"}).name;
 const tabs=[["sum","sum","สรุป"],["jobs","jobs","งานซ่อม"],["cust","cust","ลูกค้า"],["parts","parts","อะไหล่"],["led","led","รายรับ-จ่าย"],["team","team","ทีมงาน"]];
 function months(){const s=new Set([today().slice(0,7)]);[...S.jobs,...S.trx,...S.led].forEach(x=>x.date&&s.add(x.date.slice(0,7)));
@@ -207,7 +210,7 @@ function vSum(){
  <div class="tiles"><button class="tile" onclick="go('parts')"><span class="k">มูลค่าสต๊อกอะไหล่</span><b>฿${f(stock)}</b></button><button class="tile" onclick="go('jobs')"><span class="k">งานที่ค้างอยู่</span><b>${pend} งาน</b></button></div>
  <p class="s">นับค่าซ่อมเป็นรายรับเมื่อรับเครื่องแล้ว และนับการซื้ออะไหล่เป็นรายจ่ายตอนซื้อ (ระบบเงินสด) ข้อมูลเก็บบน Supabase ซิงค์ทุกเครื่องอัตโนมัติ</p>
  <div class="foot"><button class="lk" onclick="exp_()">สำรองข้อมูล</button><button class="lk" onclick="imp_()">นำเข้าข้อมูล</button></div>`}
-const tk=j=>{const i=Math.max(0,STAT.indexOf(j.status)),lk=S.led.filter(l=>l.job===j.id),lin=sum(lk.filter(l=>l.type==="in"),l=>l.amt),lout=sum(lk.filter(l=>l.type==="out"),l=>l.amt);return `<article class="tk st${i}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cn(j.cust))}</span></div><div class="amt">฿${f(j.price)}<small class="pf">กำไร ${f(j.price+lin-j.cost-lout)}</small></div></div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}${lk.length?`<p class="s pf" style="margin:6px 0 0">รายการที่เชื่อมกับงานนี้ ${lk.length} รายการ จ่าย ฿${f(lout)} รับ ฿${f(lin)}</p>`:""}
+const tk=j=>{const i=Math.max(0,STAT.indexOf(j.status)),lk=S.led.filter(l=>l.job===j.id),lin=sum(lk.filter(l=>l.type==="in"),l=>l.amt),lout=sum(lk.filter(l=>l.type==="out"),l=>l.amt);return `<article class="tk st${i}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${cph(j)?` <a href="tel:${esc(cph(j))}" style="color:inherit">${esc(cph(j))}</a>`:""}</span></div><div class="amt">฿${f(j.price)}<small class="pf">กำไร ${f(j.price+lin-j.cost-lout)}</small></div></div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}${lk.length?`<p class="s pf" style="margin:6px 0 0">รายการที่เชื่อมกับงานนี้ ${lk.length} รายการ จ่าย ฿${f(lout)} รับ ฿${f(lin)}</p>`:""}${j.detail?`<p class="s" style="margin:4px 0 0">${esc(j.detail)}</p>`:""}${j.pass?`<button class="chip" style="margin-top:8px;padding:3px 10px;font-size:12px" data-p="${esc(j.pass)}" onclick="rv(this)">รหัสเครื่อง ••••</button>`:""}
  <div class="rail">${STAT.map((s,k)=>`<button class="rs${k<=i?" on":""}${k===i?" cur":""}" onclick="jst('${j.id}','${s}')"><i></i><span>${s}</span></button>`).join("")}</div>
  <div class="tk-f"><span class="s">รับเครื่อง ${thD(j.date)}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('out','${j.id}')">+ รายจ่าย</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('in','${j.id}')">+ รายรับ</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
 function vJobs(){const all=S.jobs.filter(j=>inM(j.date)),open=all.filter(j=>j.status!=="รับเครื่องแล้ว"),done=all.filter(j=>j.status==="รับเครื่องแล้ว");
@@ -224,7 +227,7 @@ function vParts(){const h=S.trx.filter(t=>inM(t.date)).sort((x,y)=>y.date.locale
  `<h3>ประวัติซื้อ-ขาย</h3>`+(h.length?`<div class="list">${h.map(t=>{const b=t.type==="buy";return `<div class="li"><span class="tg ${b?"o":"i"}">${ic(b?"up":"down",16)}</span><div class="grow"><b>${esc(pn(t.pid))} × ${t.qty}</b><span class="s">${thD(t.date)}${b?"":`<span class="pf"> กำไร ฿${f(t.qty*(t.unit-t.costAt))}</span>`}</span></div><b class="${b?"out":"in"}">${b?"−":"+"}${f(t.qty*t.unit)}</b><button class="sm" onclick="delT('${t.id}')">ลบ</button></div>`}).join("")}</div>`:empty("ยังไม่มีรายการซื้อ-ขายในช่วงนี้","บันทึกการซื้อเข้าหรือขายออก แล้วจะแสดงที่นี่"))}
 function txList(){const T_=[];
  S.led.filter(l=>inM(l.date)).forEach(l=>{const jb=l.job&&S.jobs.find(j=>j.id===l.job);T_.push({id:l.id,date:l.date,type:l.type,cat:l.cat,note:l.note||"",amt:l.amt,job:l.job?(jb?jb.device:"ที่ลบแล้ว"):""})});
- S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.done||j.date)).forEach(j=>{const dt=j.done||j.date;T_.push({date:dt,type:"in",cat:"ค่าซ่อม",note:j.device+" "+cn(j.cust),amt:j.price,src:"งานซ่อม"});if(j.cost>0)T_.push({date:dt,type:"out",cat:"ต้นทุนอะไหล่งานซ่อม",note:j.device,amt:j.cost,src:"งานซ่อม"})});
+ S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.done||j.date)).forEach(j=>{const dt=j.done||j.date;T_.push({date:dt,type:"in",cat:"ค่าซ่อม",note:j.device+" "+cnj(j),amt:j.price,src:"งานซ่อม"});if(j.cost>0)T_.push({date:dt,type:"out",cat:"ต้นทุนอะไหล่งานซ่อม",note:j.device,amt:j.cost,src:"งานซ่อม"})});
  S.trx.filter(t=>inM(t.date)).forEach(t=>T_.push({date:t.date,type:t.type==="sell"?"in":"out",cat:t.type==="sell"?"ขายอะไหล่":"ซื้ออะไหล่เข้าสต๊อก",note:pn(t.pid)+" × "+t.qty,amt:t.qty*t.unit,src:"อะไหล่"}));
  return T_}
 let LF="all";
@@ -236,7 +239,7 @@ function vLed(){const all=txList(),i=sum(all.filter(x=>x.type==="in"),x=>x.amt),
  <div class="chips">${chip("all","ทั้งหมด")}${chip("in","รายรับ")}${chip("out","รายจ่าย")}</div>`+(a.length?Object.keys(g).sort().reverse().map(d=>`<h3>${thD(d)}</h3><div class="list">${g[d].map(x=>`<div class="li${x.src&&x.type==="out"?" pf":""}"><span class="tg ${x.type==="in"?"i":"o"}">${ic(x.type==="in"?"down":"up",16)}</span><div class="grow"><b>${esc(x.cat)}</b><span class="s">${esc(x.note)}${x.job?` <span class="rl">งาน ${esc(x.job)}</span>`:""}</span></div><b class="${x.type}">${x.type==="in"?"+":"−"}${f(x.amt)}</b>${x.id?`<button class="sm" onclick="del('led','${x.id}')">ลบ</button>`:`<span class="rl">${x.src}</span>`}</div>`).join("")}</div>`).join(""):empty("ยังไม่มีรายการในช่วงนี้","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกค่าเช่า ค่าไฟ หรือรายรับอื่นๆ"))+'<p class="s">รายการที่มีป้าย “งานซ่อม” หรือ “อะไหล่” มาจากหน้าอื่นโดยอัตโนมัติ แก้ไขหรือลบที่หน้านั้น</p>'}
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function form(title,fields,ok){
- $("#mbody").innerHTML=`<div class="grab"></div><h2>${title}</h2>`+fields.map(x=>`<label>${x.l}</label>`+(x.o?`<select id="f_${x.k}">${x.o.map(o=>`<option value="${esc(o[0])}"${o[0]===x.v?" selected":""}>${esc(o[1])}</option>`).join("")}</select>`:`<input id="f_${x.k}" type="${x.t||"text"}" value="${esc(x.v??"")}" inputmode="${x.t==="number"?"decimal":"text"}">`)).join("")+
+ $("#mbody").innerHTML=`<div class="grab"></div><h2>${title}</h2>`+fields.map(x=>`<label>${x.l}</label>`+(x.o?`<select id="f_${x.k}">${x.o.map(o=>`<option value="${esc(o[0])}"${o[0]===x.v?" selected":""}>${esc(o[1])}</option>`).join("")}</select>`:x.t==="textarea"?`<textarea id="f_${x.k}" rows="3">${esc(x.v??"")}</textarea>`:`<input id="f_${x.k}" type="${x.t||"text"}" value="${esc(x.v??"")}" inputmode="${x.t==="number"?"decimal":"text"}">`)).join("")+
  `<div class="bar"><button class="pr" id="fok">บันทึก</button><button class="gh" onclick="closeM()">ยกเลิก</button></div>`;
  $("#mod").classList.add("show");
  $("#fok").onclick=()=>{const v={};fields.forEach(x=>{const e=$("#f_"+x.k).value;v[x.k]=x.t==="number"?(parseFloat(e)||0):e.trim()});if(ok(v)!==false)closeM()}}
@@ -245,7 +248,16 @@ $("#mod").onclick=e=>{if(e.target.id==="mod")closeM()};
 const custOpts=()=>[["","ลูกค้าทั่วไป"],...S.cust.map(c=>[c.id,c.name])];
 const partOpts=()=>S.parts.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`]);
 function fCust(){form("เพิ่มลูกค้า",[{k:"name",l:"ชื่อ"},{k:"phone",l:"เบอร์โทร",t:"tel"},{k:"note",l:"หมายเหตุ"}],v=>{if(!v.name)return false;S.cust.push({id:uid(),...v})})}
-function fJob(){form("รับงานซ่อม",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cust",l:"ลูกค้า",o:custOpts()},{k:"device",l:"รุ่นเครื่อง"},{k:"issue",l:"อาการเสีย"},{k:"price",l:"ค่าซ่อม (บาท)",t:"number"},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number"}],v=>{if(!v.device)return false;S.jobs.push({id:uid(),status:"รับเครื่อง",...v})})}
+function fJob(){
+ form("รับงานซ่อม",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cust",l:"ลูกค้า",o:custOpts()},{k:"name",l:"ชื่อลูกค้า (ลูกค้าทั่วไป)"},{k:"phone",l:"เบอร์ติดต่อ",t:"tel"},{k:"device",l:"รุ่นเครื่อง"},{k:"issue",l:"อาการเสีย"},{k:"detail",l:"รายละเอียดเพิ่มเติม",t:"textarea"},{k:"pass",l:"รหัสผ่าน / รหัสปลดล็อกเครื่อง (ถ้ามี)"},{k:"price",l:"ค่าซ่อม (บาท)",t:"number"},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number"}],
+ v=>{if(!v.device)return false;const {name,phone,...r}=v;if(!r.cust){if(name)r.cname=name;if(phone)r.cphone=phone}S.jobs.push({id:uid(),status:"รับเครื่อง",...r})});
+ const sel=$("#f_cust"),nm=$("#f_name"),ph=$("#f_phone"),btn=document.createElement("button");
+ btn.type="button";btn.className="gh";btn.style.marginTop="10px";btn.textContent="+ เพิ่มไปยังรายการลูกค้า";ph.after(btn);
+ const sync=()=>{const g=!sel.value;[nm,ph].forEach(e=>{e.style.display=g?"":"none";e.previousElementSibling.style.display=g?"":"none"});btn.style.display=g?"":"none"};
+ sel.onchange=sync;sync();
+ btn.onclick=()=>{const n=nm.value.trim();if(!n){nm.focus();nm.style.borderColor="var(--out)";return}
+  const c={id:uid(),name:n,phone:ph.value.trim()};S.cust.push(c);
+  sel.insertAdjacentHTML("beforeend",`<option value="${c.id}">${esc(n)}</option>`);sel.value=c.id;nm.value="";ph.value="";sync()}}
 function fPart(){form("อะไหล่ใหม่",[{k:"name",l:"ชื่ออะไหล่"},{k:"price",l:"ราคาขาย (บาท)",t:"number"}],v=>{if(!v.name)return false;S.parts.push({id:uid(),name:v.name,qty:0,cost:0,price:v.price})})}
 function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่ก่อน");return}const p0=S.parts[0];
  form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:type==="sell"?p0.price:""}],v=>{
@@ -254,7 +266,7 @@ function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่
   else{if(v.qty>p.qty){alert("สต๊อกไม่พอ");return false}p.qty-=v.qty}
   S.trx.push({id:uid(),type,date:v.date,pid:v.pid,qty:v.qty,unit:v.unit,costAt:p.cost})})}
 function fLed(type,job){const js=S.jobs.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
- form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","ค่าบริการเพิ่ม","อื่นๆ"]:["ค่าอะไหล่ซื้อนอก","ค่าแรงช่างนอก","ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},{k:"note",l:"รายละเอียด"},{k:"job",l:"เชื่อมกับงานซ่อม (ถ้ามี)",v:job||"",o:[["","ไม่เชื่อมกับงานซ่อม"],...js.map(j=>[j.id,`${j.device} (${cn(j.cust)})`])]}],v=>{if(!v.amt)return false;if(!v.job)delete v.job;S.led.push({id:uid(),type,...v})})}
+ form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","ค่าบริการเพิ่ม","อื่นๆ"]:["ค่าอะไหล่ซื้อนอก","ค่าแรงช่างนอก","ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},{k:"note",l:"รายละเอียด"},{k:"job",l:"เชื่อมกับงานซ่อม (ถ้ามี)",v:job||"",o:[["","ไม่เชื่อมกับงานซ่อม"],...js.map(j=>[j.id,`${j.device} (${cnj(j)})`])]}],v=>{if(!v.amt)return false;if(!v.job)delete v.job;S.led.push({id:uid(),type,...v})})}
 function jst(id,s){const j=S.jobs.find(x=>x.id===id);j.status=s;if(s==="รับเครื่องแล้ว")j.done=j.done||today();else delete j.done;R()}
 function del(k,id){if(confirm("ลบรายการนี้?")){S[k]=S[k].filter(x=>x.id!==id);R()}}
 function delT(id){const t=S.trx.find(x=>x.id===id),p=S.parts.find(x=>x.id===t.pid);
