@@ -206,7 +206,19 @@ async function createStaff(v){
  await loadTeam()}
 async function setActive(id,a){const {error}=await sb.from("profiles").update({active:a}).eq("user_id",id);if(error)alert(error.message);await loadTeam()}
 function fMyPw(){form("เปลี่ยนรหัสผ่านของฉัน",[{k:"password",l:"รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"}],v=>{if(v.password.length<6)return false;sb.auth.updateUser({password:v.password}).then(r=>alert(r.error?r.error.message:"เปลี่ยนรหัสผ่านแล้ว"))})}
-function vTeam(){return `<div class="top"><h2 class="pt">ทีมงาน</h2></div>`+(TEAM.length?`<div class="list">${TEAM.map(p=>`<div class="li">${av(p.name)}<div class="grow"><b>${esc(p.name)}</b><span class="s">${esc(p.email)}</span></div><div class="acts"><span class="rl${p.role==="owner"?" ow":""}">${p.role==="owner"?"เจ้าของ":"พนักงาน"}</span>${p.active?"":'<span class="rl off">ปิดใช้งาน</span>'}${p.user_id===ME.user_id?"":`<button class="sm" onclick="setActive('${p.user_id}',${!p.active})">${p.active?"ปิดใช้งาน":"เปิดใช้งาน"}</button>`}</div></div>`).join("")}</div>`:empty("กำลังโหลดรายชื่อ","รอสักครู่"))}
+function vTeam(){return `<div class="top"><h2 class="pt">ทีมงาน</h2></div>`+(TEAM.length?`<div class="list">${TEAM.map(p=>{const me=p.user_id===ME.user_id;return `<div class="li"><button class="lm" onclick="fTeam('${p.user_id}')" aria-label="แก้ไข ${esc(p.name)}">${av(p.name)}<div class="grow"><b>${esc(p.name)}${me?" (คุณ)":""}</b><span class="s">${esc(p.email)}</span><span style="margin-top:4px"><span class="rl${p.role==="owner"?" ow":""}">${p.role==="owner"?"เจ้าของ":"พนักงาน"}</span>${p.active?"":' <span class="rl off">ปิดใช้งาน</span>'}</span></div>${ic("chev",18)}</button>${me?"":`<button class="sm" onclick="setActive('${p.user_id}',${!p.active})">${p.active?"ปิดใช้งาน":"เปิดใช้งาน"}</button>`}</div>`}).join("")}</div>`:empty("กำลังโหลดรายชื่อ","รอสักครู่"))}
+function fTeam(id){const p=TEAM.find(x=>x.user_id===id);if(!p)return;const self=id===ME.user_id;
+ form("แก้ไข "+p.name,[{k:"name",l:"ชื่อ",v:p.name},...(self?[]:[{k:"role",l:"สิทธิ์ (บทบาท)",v:p.role,o:[["staff","พนักงานหน้าร้าน"],["owner","เจ้าของ/ผู้จัดการ"]]}]),{k:"password",l:(self?"รหัสผ่านใหม่ของคุณ":"ตั้งรหัสผ่านใหม่ให้พนักงาน")+" (เว้นว่างถ้าไม่เปลี่ยน)"}],v=>{
+  if(!v.name){alert("กรอกชื่อก่อน");return false}
+  if(v.password&&v.password.length<6){alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");return false}
+  saveMember(p,v)})}
+async function saveMember(p,v){const self=p.user_id===ME.user_id,upd={name:v.name};if(!self)upd.role=v.role;
+ const {error}=await sb.from("profiles").update(upd).eq("user_id",p.user_id);
+ if(error){alert("บันทึกไม่สำเร็จ: "+error.message);await loadTeam();return}
+ if(self){ME.name=v.name;$("#who").textContent=v.name+(ME.role==="owner"?" (เจ้าของ)":" (พนักงาน)")}
+ if(v.password){const r=self?await sb.auth.updateUser({password:v.password}):await sb.rpc("admin_set_password",{target:p.user_id,new_password:v.password});
+  if(r.error){alert("เปลี่ยนรหัสผ่านไม่สำเร็จ: "+r.error.message);await loadTeam();return}}
+ toast(v.password?"บันทึกและเปลี่ยนรหัสผ่านแล้ว":"บันทึกแล้ว");await loadTeam()}
 function fStaff(){form("เพิ่มพนักงาน",[{k:"name",l:"ชื่อพนักงาน"},{k:"email",l:"อีเมล (ใช้ล็อกอิน)",t:"email"},{k:"password",l:"รหัสผ่านเริ่มต้น (อย่างน้อย 6 ตัว)"},{k:"role",l:"สิทธิ์",o:[["staff","พนักงานหน้าร้าน"],["owner","เจ้าของ/ผู้จัดการ"]]}],v=>{if(!v.name||!v.email||v.password.length<6){alert("กรอกชื่อ อีเมล และรหัสผ่านให้ครบ");return false}createStaff(v)})}
 function vSum(){
  const jd=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.done||j.date)),sl=S.trx.filter(t=>t.type==="sell"&&inM(t.date)),bu=S.trx.filter(t=>t.type==="buy"&&inM(t.date)),li=S.led.filter(l=>l.type==="in"&&inM(l.date)),lo=S.led.filter(l=>l.type==="out"&&inM(l.date));
