@@ -110,6 +110,14 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 .cd{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:12px}.cd-h{display:flex;align-items:center;gap:12px}.cd-h .av{width:48px;height:48px;font-size:18px}
 .cd-n{margin:12px 0 0;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:14px;white-space:pre-wrap}
 .t3{grid-template-columns:repeat(3,1fr)}.t3 .tile{padding:10px 12px}.t3 .tile b{font-size:17px}
+.tg.b{background:color-mix(in srgb,#3b82f6 16%,transparent);color:#3b82f6}
+.accs{padding-bottom:4px}.acc{flex:none;min-width:148px;text-align:left;background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:1px;color:var(--tx);cursor:pointer}
+.acc b{font-weight:600}.acc .bal{font:600 19px Prompt,sans-serif;margin-top:2px}.acc.on{border-color:var(--ac);box-shadow:inset 0 0 0 1.5px var(--ac)}
+.acc.add{border-style:dashed;align-items:center;justify-content:center;color:var(--mu);min-width:110px;gap:4px}
+.row2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 12px}
+.tg.w{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#d97706}
+.us{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}.rl .x{border:0;background:none;color:var(--mu);margin-left:4px;padding:0 2px;cursor:pointer;font-size:15px;line-height:1}
+.qn{background:var(--ink);color:var(--ac);font:600 12px Prompt,sans-serif;padding:1px 9px;border-radius:6px}.qrow{display:flex;gap:6px;align-items:center;align-self:flex-start;margin-bottom:4px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
@@ -125,18 +133,18 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 const SUPABASE_URL="https://lbmiywdkdrdwmwlmuzeh.supabase.co";
 const SUPABASE_KEY="sb_publishable_2Cn8tWZin5thCimvtjGuug_QdiGrMkF";
 /* ================================================== */
-const def={cust:[],jobs:[],parts:[],trx:[],led:[]};
+const def={cust:[],jobs:[],parts:[],trx:[],led:[],acc:[],xfer:[]};
 const KINDS=Object.keys(def);
 let S=JSON.parse(JSON.stringify(def)),snap=new Map(),busy=false,again=false,tm;
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 async function loadAll(){
- const N={cust:[],jobs:[],parts:[],trx:[],led:[]};snap=new Map();
+ const N={cust:[],jobs:[],parts:[],trx:[],led:[],acc:[],xfer:[]};snap=new Map();
  for(let from=0;;from+=1000){
   const {data,error}=await sb.from("shop_data").select("id,kind,data").order("id").range(from,from+999);
   if(error){alert("โหลดข้อมูลไม่สำเร็จ: "+error.message);break}
   data.forEach(r=>{if(N[r.kind]){N[r.kind].push(r.data);snap.set(r.id,JSON.stringify(r.data))}});
   if(data.length<1000)break}
- S=N}
+ S=N;ensureQ()}
 async function save(){
  if(busy){again=true;return}busy=true;
  try{
@@ -166,7 +174,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const f=n=>Number(n||0).toLocaleString("th-TH",{maximumFractionDigits:2});
 const today=()=>{const x=new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
 const sum=(a,fn)=>a.reduce((s,x)=>s+fn(x),0);
-const I={sum:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',jobs:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',cust:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2.2.7 3.5 2.6 3.5 5.5"/>',parts:'<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',led:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l2-3h12l2 3M16 14h2"/>',team:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2M15 10h3M15 14h3"/>',warr:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',in:'<path d="M17 7L7 17M7 17h8M7 17V9"/>',out:'<path d="M7 17L17 7M17 7H9M17 7v8"/>',back:'<path d="M15 6l-6 6 6 6"/>',chev:'<path d="M9 6l6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',down:'<path d="M12 5v14M6 13l6 6 6-6"/>',up:'<path d="M12 19V5M6 11l6-6 6 6"/>'};
+const I={sum:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',jobs:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',cust:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2.2.7 3.5 2.6 3.5 5.5"/>',parts:'<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',led:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l2-3h12l2 3M16 14h2"/>',team:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2M15 10h3M15 14h3"/>',warr:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',swap:'<path d="M7 7h12l-3-3M17 17H5l3 3"/>',in:'<path d="M17 7L7 17M7 17h8M7 17V9"/>',out:'<path d="M7 17L17 7M17 7H9M17 7v8"/>',back:'<path d="M15 6l-6 6 6 6"/>',chev:'<path d="M9 6l6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',down:'<path d="M12 5v14M6 13l6 6 6-6"/>',up:'<path d="M12 19V5M6 11l6-6 6 6"/>'};
 const ic=(n,z=20)=>`<svg class="ic" width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 const thM=m=>m==="all"?"ทุกช่วงเวลา":new Date(m+"-01T00:00").toLocaleDateString("th-TH",{month:"long",year:"numeric"});
 const thS=m=>new Date(m+"-01T00:00").toLocaleDateString("th-TH",{month:"short",year:"numeric"});
@@ -183,6 +191,14 @@ const cn=id=>(S.cust.find(c=>c.id===id)||{name:"ลูกค้าทั่ว�
 const cnj=j=>j.cust?cn(j.cust):(j.cname||"ลูกค้าทั่วไป");
 const cph=j=>j.cust?((S.cust.find(c=>c.id===j.cust)||{}).phone||""):(j.cphone||"");
 function rv(b){if(b.dataset.on){delete b.dataset.on;b.textContent="รหัสเครื่อง ••••"}else{b.dataset.on=1;b.textContent="รหัสเครื่อง "+b.dataset.p}}
+const AC=()=>S.acc||[];
+const accName=id=>(AC().find(a=>a.id===id)||{}).name||"";
+const accOpts=()=>[["","ไม่ระบุบัญชี"],...AC().map(a=>[a.id,a.name])];
+const defAcc=()=>AC().length?AC()[0].id:"";
+const nextQ=()=>S.jobs.reduce((m,j)=>Math.max(m,j.q||0),0)+1;
+function ensureQ(){let n=nextQ()-1;S.jobs.filter(j=>!j.q).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.id<b.id?-1:1)).forEach(j=>{j.q=++n})}
+const hasW=j=>j.war!==false;
+const qb=j=>`<span class="qrow">${j.q?`<span class="qn">คิว ${j.q}</span>`:""}<span class="rl">${hasW(j)?"มีประกัน":"ไม่ประกัน"}</span></span>`;
 const pn=id=>(S.parts.find(p=>p.id===id)||{name:"(ลบแล้ว)"}).name;
 const tabs=[["sum","sum","สรุป"],["jobs","jobs","งานซ่อม"],["warr","warr","ประกัน"],["cust","cust","ลูกค้า"],["parts","parts","อะไหล่"],["led","led","รับ-จ่าย"],["team","team","ทีมงาน"]];
 function months(){const s=new Set([today().slice(0,7)]);[...S.jobs,...S.trx,...S.led].forEach(x=>x.date&&s.add(x.date.slice(0,7)));
@@ -196,15 +212,15 @@ function R(){save();months();
 let MENU=[];
 let POP=false;
 function popClose(){const w=$("#popwrap");if(w)w.style.display="none";const f=$("#fab");if(f)f.classList.remove("open");POP=false}
-function menu(title,items){MENU=items.map(i=>i[1]);const c={g:"#1f9d55",r:"#e0414a",b:"#3b82f6"};
+function menu(title,items){MENU=items.map(i=>i[1]);const c={g:"#1f9d55",r:"#e0414a",b:"#3b82f6",o:"#f59e0b"};
  $("#pop").setAttribute("aria-label",title);
  $("#pop").innerHTML=items.map((i,k)=>`<button class="pi" style="--i:${k}" onclick="mi(${k})"><span class="pic" style="background:${c[i[2]]}">${ic(i[3],18)}</span>${i[0]}</button>`).join("");
  $("#popwrap").style.display="block";$("#fab").classList.add("open");POP=true}
 function mi(k){popClose();MENU[k]()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")popClose()});
 function fabGo(){if(POP){popClose();return}({jobs:fJob,cust:fCust,team:fStaff,
- parts:()=>menu("เพิ่มรายการอะไหล่",[["ขายอะไหล่",()=>fTrx("sell"),"g","in"],["ซื้อเข้าสต๊อก",()=>fTrx("buy"),"r","out"],["เพิ่มอะไหล่ใหม่",fPart,"b","plus"]]),
- led:()=>menu("เพิ่มรายการรับ-จ่าย",[["รายจ่าย",()=>fLed("out"),"r","out"],["รายรับ",()=>fLed("in"),"g","in"]])})[T]()}
+ parts:()=>menu("เพิ่มรายการอะไหล่",[["ขายอะไหล่",()=>fTrx("sell"),"g","in"],["เบิกอะไหล่",()=>fUse(),"o","jobs"],["ซื้อเข้าสต๊อก",()=>fTrx("buy"),"r","out"],["เพิ่มอะไหล่ใหม่",fPart,"b","plus"]]),
+ led:()=>menu("เพิ่มรายการรับ-จ่าย",[["รายจ่าย",()=>fLed("out"),"r","out"],["รายรับ",()=>fLed("in"),"g","in"],...(ME.role==="owner"?[["โอนเงิน",fXfer,"b","swap"]]:[])])})[T]()}
 function go(t){popClose();T=t;CV=null;R();if(t==="team")loadTeam()}
 async function loadTeam(){const {data}=await sb.from("profiles").select("*").order("created_at");TEAM=data||[];if(T==="team")R()}
 const sb2=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
@@ -235,7 +251,7 @@ async function saveMember(p,v){const self=p.user_id===ME.user_id,upd={name:v.nam
 function fStaff(){form("เพิ่มพนักงาน",[{k:"name",l:"ชื่อพนักงาน"},{k:"email",l:"อีเมล (ใช้ล็อกอิน)",t:"email"},{k:"password",l:"รหัสผ่านเริ่มต้น (อย่างน้อย 6 ตัว)"},{k:"role",l:"สิทธิ์",o:[["staff","พนักงานหน้าร้าน"],["owner","เจ้าของ/ผู้จัดการ"]]}],v=>{if(!v.name||!v.email||v.password.length<6){alert("กรอกชื่อ อีเมล และรหัสผ่านให้ครบ");return false}createStaff(v)})}
 function vSum(){
  const jd=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.done||j.date)),sl=S.trx.filter(t=>t.type==="sell"&&inM(t.date)),bu=S.trx.filter(t=>t.type==="buy"&&inM(t.date)),li=S.led.filter(l=>l.type==="in"&&inM(l.date)),lo=S.led.filter(l=>l.type==="out"&&inM(l.date));
- const incJ=sum(jd,j=>j.price||0),costJ=sum(jd,j=>j.cost||0),incS=sum(sl,t=>t.qty*t.unit),profS=sum(sl,t=>t.qty*(t.unit-t.costAt)),pur=sum(bu,t=>t.qty*t.unit),incL=sum(li,l=>l.amt),outL=sum(lo,l=>l.amt);
+ const incJ=sum(jd,j=>j.price||0),costJ=sum(jd,j=>j.cost||0),usedJ=sum(S.trx.filter(t=>t.type==="use"&&jd.some(j=>j.id===t.job)),t=>t.qty*t.costAt),incS=sum(sl,t=>t.qty*t.unit),profS=sum(sl,t=>t.qty*(t.unit-t.costAt)),pur=sum(bu,t=>t.qty*t.unit),incL=sum(li,l=>l.amt),outL=sum(lo,l=>l.amt);
  const inc=incJ+incS+incL,exp=costJ+pur+outL,net=inc-exp,stock=sum(S.parts,p=>p.qty*p.cost),pend=S.jobs.filter(j=>j.status!=="รับเครื่องแล้ว").length;
  const pe=inc>0?Math.min(100,Math.round(exp/inc*100)):(exp>0?100:0);
  const row=(l,v,c)=>`<div class="li"><span>${l}</span><b class="${c}">${c==="in"?"+":"−"}${f(v)}</b></div>`;
@@ -244,39 +260,39 @@ function vSum(){
  <div class="lg"><span><b class="d e"></b>รายจ่าย ฿${f(exp)}</span><span><b class="d p"></b>กำไร ${net>0?"฿"+f(net):"ยังไม่มี"}</span></div></section>
  <h3>รายรับ</h3><div class="list">${row("ค่าซ่อม ("+jd.length+" งาน)",incJ,"in")}${row("ขายอะไหล่",incS,"in")}${row("รายรับอื่นๆ",incL,"in")}</div>
  <h3>รายจ่าย</h3><div class="list">${row("ต้นทุนอะไหล่ในงานซ่อม",costJ,"out")}${row("ซื้ออะไหล่เข้าสต๊อก",pur,"out")}${row("ค่าเช่า ค่าไฟ และอื่นๆ",outL,"out")}</div>
- <h3>กำไรแยกตามที่มา</h3><div class="list"><div class="li"><span>งานซ่อม</span><b>฿${f(incJ-costJ)}</b></div><div class="li"><span>ขายอะไหล่</span><b>฿${f(profS)}</b></div></div>
- <div class="tiles"><button class="tile" onclick="go('parts')"><span class="k">มูลค่าสต๊อกอะไหล่</span><b>฿${f(stock)}</b></button><button class="tile" onclick="go('jobs')"><span class="k">งานที่ค้างอยู่</span><b>${pend} งาน</b></button></div>
- <p class="s">นับค่าซ่อมเป็นรายรับเมื่อรับเครื่องแล้ว และนับการซื้ออะไหล่เป็นรายจ่ายตอนซื้อ (ระบบเงินสด) ข้อมูลเก็บบน Supabase ซิงค์ทุกเครื่องอัตโนมัติ</p>
+ <h3>กำไรแยกตามที่มา</h3><div class="list"><div class="li"><span>งานซ่อม</span><b>฿${f(incJ-costJ-usedJ)}</b></div><div class="li"><span>ขายอะไหล่</span><b>฿${f(profS)}</b></div></div>
+ <div class="tiles"><button class="tile" onclick="go('parts')"><span class="k">มูลค่าสต๊อกอะไหล่</span><b>฿${f(stock)}</b></button><button class="tile" onclick="go('jobs')"><span class="k">งานที่ค้างอยู่</span><b>${pend} งาน</b></button>${AC().length?`<button class="tile" style="grid-column:1/-1" onclick="go('led')"><span class="k">เงินในบัญชีทั้งหมด</span><b>฿${f(sum(AC(),accBal))}</b></button>`:""}</div>
+ <p class="s">นับค่าซ่อมเป็นรายรับเมื่อรับเครื่องแล้ว และนับการซื้ออะไหล่เป็นรายจ่ายตอนซื้อ (ระบบเงินสด) การเบิกอะไหล่จากสต๊อกนับเป็นต้นทุนของงานซ่อม โดยไม่นับเป็นรายจ่ายซ้ำ ข้อมูลเก็บบน Supabase ซิงค์ทุกเครื่องอัตโนมัติ</p>
  <div class="foot"><button class="lk" onclick="exp_()">สำรองข้อมูล</button><button class="lk" onclick="imp_()">นำเข้าข้อมูล</button></div>`}
-const tk=j=>{const i=Math.max(0,STAT.indexOf(j.status)),lk=S.led.filter(l=>l.job===j.id),lin=sum(lk.filter(l=>l.type==="in"),l=>l.amt),lout=sum(lk.filter(l=>l.type==="out"),l=>l.amt);return `<article class="tk ${SC[j.status]||"st0"}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${cph(j)?` <a href="tel:${esc(cph(j))}" style="color:inherit">${esc(cph(j))}</a>`:""}</span></div>${j.price==null?`<div class="amt un">รอกำหนดค่าซ่อม<small>กำหนดตอนเริ่มซ่อม</small></div>`:`<div class="amt">฿${f(j.price)}<small class="pf">กำไร ${f(j.price+lin-(j.cost||0)-lout)}</small></div>`}</div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}${lk.length?`<p class="s pf" style="margin:6px 0 0">รายการที่เชื่อมกับงานนี้ ${lk.length} รายการ จ่าย ฿${f(lout)} รับ ฿${f(lin)}</p>`:""}${j.detail?`<p class="s" style="margin:4px 0 0">${esc(j.detail)}</p>`:""}${j.pass?`<button class="chip" style="margin-top:8px;padding:3px 10px;font-size:12px" data-p="${esc(j.pass)}" onclick="rv(this)">รหัสเครื่อง ••••</button>`:""}
+const tk=j=>{const i=Math.max(0,STAT.indexOf(j.status)),lk=S.led.filter(l=>l.job===j.id),lin=sum(lk.filter(l=>l.type==="in"),l=>l.amt),lout=sum(lk.filter(l=>l.type==="out"),l=>l.amt),us=S.trx.filter(t=>t.type==="use"&&t.job===j.id),uc=sum(us,u=>u.qty*u.costAt);return `<article class="tk ${SC[j.status]||"st0"}"><div class="tk-h"><div class="tk-t">${qb(j)}<b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${cph(j)?` <a href="tel:${esc(cph(j))}" style="color:inherit">${esc(cph(j))}</a>`:""}</span></div>${j.price==null?`<div class="amt un">${j.est!=null?"ประเมิน ฿"+f(j.est):"รอกำหนดราคา"}<small>${j.est!=null?"ราคาจริงกำหนดตอนซ่อมเสร็จ":"ใส่ราคาประเมินได้ที่ปุ่มแก้ไข"}</small></div>`:`<div class="amt">฿${f(j.price)}${j.est!=null&&j.est!==j.price?`<small style="color:var(--mu)">ประเมินไว้ ฿${f(j.est)}</small>`:""}<small class="pf">กำไร ${f(j.price+lin-(j.cost||0)-lout-uc)}</small></div>`}</div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}${lk.length?`<p class="s pf" style="margin:6px 0 0">รายการที่เชื่อมกับงานนี้ ${lk.length} รายการ จ่าย ฿${f(lout)} รับ ฿${f(lin)}</p>`:""}${us.length?`<div class="us">${us.map(u=>`<span class="rl">${esc(pn(u.pid))} ${u.qty} ชิ้น<button class="x" aria-label="คืนอะไหล่เข้าสต๊อก" onclick="delT('${u.id}')">×</button></span>`).join("")}<span class="s pf">ต้นทุนจากสต๊อก ฿${f(uc)}</span></div>`:""}${j.detail?`<p class="s" style="margin:4px 0 0">${esc(j.detail)}</p>`:""}${j.pass?`<button class="chip" style="margin-top:8px;padding:3px 10px;font-size:12px" data-p="${esc(j.pass)}" onclick="rv(this)">รหัสเครื่อง ••••</button>`:""}
  <div class="rail">${STAT.map((s,k)=>`<button class="rs${k<=i?" on":""}${k===i?" cur":""}" onclick="jst('${j.id}','${s}')"><i></i><span>${s}</span></button>`).join("")}</div>
- <div class="tk-f"><div class="s">รับงาน ${thD(j.date)}${j.status==="รับเครื่องแล้ว"?`<span style="margin-left:14px">ลูกค้ามารับเครื่อง</span> <b style="color:var(--st3)">${thD(j.done||j.date)}</b>`:""}</div><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('out','${j.id}')">+ รายจ่าย</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('in','${j.id}')">+ รายรับ</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
+ <div class="tk-f"><div class="s">รับงาน ${thD(j.date)}${j.status==="รับเครื่องแล้ว"?`<span style="margin-left:14px">ลูกค้ามารับเครื่อง</span> <b style="color:var(--st3)">${thD(j.done||j.date)}</b>`:""}</div><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fUse('${j.id}')">เบิกอะไหล่</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('out','${j.id}')">+ รายจ่าย</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fLed('in','${j.id}')">+ รายรับ</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
 function vJobs(){const open=S.jobs.filter(j=>j.status!=="รับเครื่องแล้ว"),k=STAT.slice(0,-1).includes(JF)?JF:"all";
- const a=(k==="all"?open:open.filter(j=>j.status===k)).slice().sort((x,y)=>y.date.localeCompare(x.date));
+ const a=(k==="all"?open:open.filter(j=>j.status===k)).slice().sort((x,y)=>(x.q||1e9)-(y.q||1e9)||x.date.localeCompare(y.date));
  const chip=(v,l,n)=>`<button class="chip${k===v?" on":""}" onclick="JF='${v}';R()">${l} <b>${n}</b></button>`;
  return `<div class="top"><h2 class="pt">งานซ่อม</h2></div>
- <div class="chips">${chip("all","ทั้งหมด",open.length)}${STAT.slice(0,-1).map(s=>chip(s,s,open.filter(j=>j.status===s).length)).join("")}</div>`+(a.length?a.map(tk).join(""):empty("ไม่มีงานซ่อมที่ค้างอยู่","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกเครื่องที่ลูกค้านำมาซ่อม"))+'<p class="s">งานที่ลูกค้ามารับเครื่องแล้ว จะย้ายไปอยู่ที่เมนู “ประกัน”</p>'}
+ <div class="chips">${chip("all","ทั้งหมด",open.length)}${STAT.slice(0,-1).map(s=>chip(s,s,open.filter(j=>j.status===s).length)).join("")}</div>`+(a.length?a.map(tk).join(""):empty("ไม่มีงานซ่อมที่ค้างอยู่","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกเครื่องที่ลูกค้านำมาซ่อม"))+'<p class="s">เรียงตามเลขคิว คิวน้อยสุดอยู่บนสุด งานที่ลูกค้ามารับเครื่องแล้วจะย้ายไปอยู่ที่เมนู “ประกัน”</p>'}
 const WD=30;
 const dayDiff=d=>Math.round((new Date(today()+"T00:00")-new Date(d+"T00:00"))/864e5);
 const addD=(d,n)=>{const x=new Date(d+"T00:00");x.setDate(x.getDate()+n);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
 let WF="act";
-const wc=x=>{const j=x.j,d=x.d,ex=d>WD,left=WD-d,cls=ex?"st0":left<=7?"st1":"st3",dn=j.done||j.date,ph=cph(j);
- return `<article class="tk ${cls}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${ph?` <a href="tel:${esc(ph)}" style="color:inherit">${esc(ph)}</a>`:""}</span><span class="wb" style="margin-top:8px;align-self:flex-start">${ex?`หมดประกัน เกิน ${d-WD} วัน`:left===0?"ในประกัน วันสุดท้าย":`ในประกัน เหลือ ${left} วัน`}</span></div><div class="wd"><b>${d}</b><span>วันนับจากรับเครื่อง</span></div></div>
- <div class="wbar"><i style="width:${Math.min(100,Math.round(d/WD*100))}%"></i></div>${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}
- <div class="tk-f"><div class="s">ลูกค้ามารับเครื่อง ${thD(dn)}<span style="margin-left:14px">ประกันถึง ${thD(addD(dn,WD))}</span></div><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="unpick('${j.id}')">ยกเลิกการรับเครื่อง</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
-function vWarr(){const all=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว").map(j=>({j,d:dayDiff(j.done||j.date)})),act=all.filter(x=>x.d<=WD),exp=all.filter(x=>x.d>WD);
- const a=(WF==="exp"?exp:WF==="all"?all:act).slice().sort((x,y)=>WF==="act"?y.d-x.d:x.d-y.d);
+const wc=x=>{const j=x.j,d=x.d,ex=d>WD,left=WD-d,nw=!hasW(j),cls=(nw||ex)?"st0":left<=7?"st1":"st3",dn=j.done||j.date,ph=cph(j);
+ return `<article class="tk ${cls}"><div class="tk-h"><div class="tk-t">${qb(j)}<b class="dev">${esc(j.device)}</b><span class="s">${esc(cnj(j))}${ph?` <a href="tel:${esc(ph)}" style="color:inherit">${esc(ph)}</a>`:""}</span><span class="wb" style="margin-top:8px;align-self:flex-start">${nw?"ไม่มีประกัน":ex?`หมดประกัน เกิน ${d-WD} วัน`:left===0?"ในประกัน วันสุดท้าย":`ในประกัน เหลือ ${left} วัน`}</span></div><div class="wd"><b>${d}</b><span>วันนับจากรับเครื่อง</span></div></div>
+ ${nw?"":`<div class="wbar"><i style="width:${Math.min(100,Math.round(d/WD*100))}%"></i></div>`}${j.issue?`<p class="iss">${esc(j.issue)}</p>`:""}
+ <div class="tk-f"><div class="s">ลูกค้ามารับเครื่อง ${thD(dn)}${nw?"":`<span style="margin-left:14px">ประกันถึง ${thD(addD(dn,WD))}</span>`}</div><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="unpick('${j.id}')">ยกเลิกการรับเครื่อง</button><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fJob('${j.id}')">แก้ไข</button><button class="sm" onclick="del('jobs','${j.id}')">ลบ</button></span></div></article>`};
+function vWarr(){const all=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว").map(j=>({j,d:dayDiff(j.done||j.date)})),w=all.filter(x=>hasW(x.j)),act=w.filter(x=>x.d<=WD),exp=w.filter(x=>x.d>WD),nw=all.filter(x=>!hasW(x.j));
+ const a=(WF==="exp"?exp:WF==="nw"?nw:WF==="all"?all:act).slice().sort((x,y)=>WF==="act"?y.d-x.d:x.d-y.d);
  const chip=(v,l,n)=>`<button class="chip${WF===v?" on":""}" onclick="WF='${v}';R()">${l} <b>${n}</b></button>`;
  return `<div class="top"><h2 class="pt">ประกัน</h2></div><p class="s" style="margin:-6px 0 12px">ประกัน ${WD} วัน นับจากวันที่ลูกค้ามารับเครื่อง</p>
- <div class="chips">${chip("act","ในประกัน",act.length)}${chip("exp","หมดประกัน",exp.length)}${chip("all","ทั้งหมด",all.length)}</div>`+(a.length?a.map(wc).join(""):empty(WF==="exp"?"ยังไม่มีงานที่หมดประกัน":"ไม่มีงานที่อยู่ในประกัน","เมื่อลูกค้ามารับเครื่อง ให้แตะสถานะ “รับเครื่องแล้ว” ในใบงานซ่อม งานจะมาอยู่ที่นี่"))}
+ <div class="chips">${chip("act","ในประกัน",act.length)}${chip("exp","หมดประกัน",exp.length)}${chip("nw","ไม่ประกัน",nw.length)}${chip("all","ทั้งหมด",all.length)}</div>`+(a.length?a.map(wc).join(""):empty(WF==="exp"?"ยังไม่มีงานที่หมดประกัน":WF==="nw"?"ไม่มีงานที่ไม่ประกัน":"ไม่มีงานที่อยู่ในประกัน","เมื่อลูกค้ามารับเครื่อง ให้แตะสถานะ “รับเครื่องแล้ว” ในใบงานซ่อม งานจะมาอยู่ที่นี่"))}
 function cList(){const q=CQ.trim().toLowerCase(),a=S.cust.filter(c=>!q||(c.name+" "+(c.phone||"")).toLowerCase().includes(q));
  return a.length?`<div class="list">${a.map(c=>{const js=S.jobs.filter(j=>j.cust===c.id);return `<div class="li"><button class="lm" onclick="CV='${c.id}';R()" aria-label="ดูประวัติการซ่อมของ ${esc(c.name)}">${av(c.name)}<div class="grow"><b>${esc(c.name)}</b><span class="s">${js.length?`ซ่อมแล้ว ${js.length} ครั้ง ยอดรวม ฿${f(sum(js,j=>j.price||0))}`:"ยังไม่เคยซ่อม"}</span>${c.phone?`<span class="s">${esc(c.phone)}</span>`:""}</div>${ic("chev",18)}</button>${c.phone?`<a class="ib" href="tel:${esc(c.phone)}" aria-label="โทรหา ${esc(c.name)}">${ic("phone",18)}</a>`:""}</div>`}).join("")}</div>`:empty(q?"ไม่พบลูกค้าที่ค้นหา":"ยังไม่มีข้อมูลลูกค้า",q?"ลองค้นด้วยชื่ออื่นหรือเบอร์โทร":"กดปุ่ม + มุมขวาล่าง เพื่อเก็บชื่อและเบอร์โทรไว้ใช้ตอนรับงาน")}
 const hc=j=>{const dn=j.done||j.date,dn_=j.status==="รับเครื่องแล้ว",d=dayDiff(dn),ex=d>WD,left=WD-d;
- return `<article class="tk ${SC[j.status]||"st0"}"><div class="tk-h"><div class="tk-t"><b class="dev">${esc(j.device)}</b>${j.issue?`<span class="s">${esc(j.issue)}</span>`:""}</div>${j.price==null?'<div class="amt un">รอกำหนดค่าซ่อม</div>':`<div class="amt">฿${f(j.price)}</div>`}</div>${j.detail?`<p class="s" style="margin:6px 0 0">${esc(j.detail)}</p>`:""}
- <div class="s" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center"><span>รับงาน ${thD(j.date)}</span>${dn_?`<span>ลูกค้ามารับเครื่อง ${thD(dn)}</span>`:""}<span class="wb">${j.status}</span>${dn_?`<span class="wb" style="--c:${ex?"var(--st0)":left<=7?"var(--st1)":"var(--st3)"}">${ex?`หมดประกัน เกิน ${d-WD} วัน`:left===0?"ประกันวันสุดท้าย":`ประกันเหลือ ${left} วัน`}</span>`:""}</div></article>`};
+ return `<article class="tk ${SC[j.status]||"st0"}"><div class="tk-h"><div class="tk-t">${qb(j)}<b class="dev">${esc(j.device)}</b>${j.issue?`<span class="s">${esc(j.issue)}</span>`:""}</div>${j.price==null?`<div class="amt un">${j.est!=null?"ประเมิน ฿"+f(j.est):"รอกำหนดราคา"}</div>`:`<div class="amt">฿${f(j.price)}</div>`}</div>${j.detail?`<p class="s" style="margin:6px 0 0">${esc(j.detail)}</p>`:""}
+ <div class="s" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center"><span>รับงาน ${thD(j.date)}</span>${dn_?`<span>ลูกค้ามารับเครื่อง ${thD(dn)}</span>`:""}<span class="wb">${j.status}</span>${dn_?(!hasW(j)?`<span class="wb" style="--c:var(--st0)">ไม่มีประกัน</span>`:`<span class="wb" style="--c:${ex?"var(--st0)":left<=7?"var(--st1)":"var(--st3)"}">${ex?`หมดประกัน เกิน ${d-WD} วัน`:left===0?"ประกันวันสุดท้าย":`ประกันเหลือ ${left} วัน`}</span>`):""}</div></article>`};
 function delCust(id){const c=S.cust.find(x=>x.id===id);if(!c||!confirm("ลบลูกค้า "+c.name+"? ประวัติงานซ่อมยังอยู่ และจะแสดงชื่อกับเบอร์ไว้ในใบงาน"))return;
  S.jobs.forEach(j=>{if(j.cust===id){j.cname=c.name;if(c.phone)j.cphone=c.phone;j.cust=""}});S.cust=S.cust.filter(x=>x.id!==id);CV=null;R()}
-function vCD(c){const js=S.jobs.filter(j=>j.cust===c.id).sort((a,b)=>b.date.localeCompare(a.date)),war=js.filter(j=>j.status==="รับเครื่องแล้ว"&&dayDiff(j.done||j.date)<=WD).length;
+function vCD(c){const js=S.jobs.filter(j=>j.cust===c.id).sort((a,b)=>b.date.localeCompare(a.date)),war=js.filter(j=>j.status==="รับเครื่องแล้ว"&&hasW(j)&&dayDiff(j.done||j.date)<=WD).length;
  return `<button class="chip" onclick="CV=null;R()" style="margin:6px 0 12px">${ic("back",16)} ลูกค้าทั้งหมด</button>
  <section class="cd"><div class="cd-h">${av(c.name)}<div class="grow"><h2 class="pt" style="font-size:20px">${esc(c.name)}</h2>${c.phone?`<span class="s">${esc(c.phone)}</span>`:'<span class="s">ไม่มีเบอร์โทร</span>'}</div>${c.phone?`<a class="ib" href="tel:${esc(c.phone)}" aria-label="โทรหา ${esc(c.name)}">${ic("phone",18)}</a>`:""}</div>${c.note?`<p class="cd-n">${esc(c.note)}</p>`:""}
  <div class="acts" style="margin-top:14px;flex-wrap:wrap"><button class="pr" onclick="fJob(null,'${c.id}')">${ic("plus",18)}รับงานซ่อม</button><button class="gh" onclick="fCust('${c.id}')">แก้ไขข้อมูล</button><button class="sm" onclick="delCust('${c.id}')">ลบลูกค้า</button></div></section>
@@ -286,19 +302,37 @@ function vCust(){const c=CV&&S.cust.find(x=>x.id===CV);if(c)return vCD(c);return
 function vParts(){const h=S.trx.filter(t=>inM(t.date)).sort((x,y)=>y.date.localeCompare(x.date));
  return `<div class="top"><h2 class="pt">อะไหล่</h2></div>
  <h3 style="margin-top:4px">สต๊อกคงเหลือ</h3>`+(S.parts.length?`<div class="list">${S.parts.map(p=>{const m=p.price>0?Math.round((p.price-p.cost)/p.price*100):0,low=p.qty<=2;return `<div class="li"><div class="grow"><b>${esc(p.name)}</b><span class="s">ทุน ฿${f(p.cost)} ขาย ฿${f(p.price)}<span class="pf"> กำไร ${m}%</span></span><div class="lvl"><i class="${low?"low":""}" style="width:${Math.min(100,p.qty*10)}%"></i></div></div><div class="qty${low?" low":""}"><b>${p.qty}</b><span class="s">${low?"ใกล้หมด":"ชิ้น"}</span></div><button class="sm" onclick="del('parts','${p.id}')">ลบ</button></div>`}).join("")}</div>`:empty("ยังไม่มีอะไหล่","กดปุ่ม + แล้วเลือก “เพิ่มอะไหล่ใหม่” จากนั้นบันทึกการซื้อเข้า สต๊อกและต้นทุนจะคำนวณให้เอง"))+
- `<h3>ประวัติซื้อ-ขาย</h3>`+(h.length?`<div class="list">${h.map(t=>{const b=t.type==="buy";return `<div class="li"><span class="tg ${b?"o":"i"}">${ic(b?"up":"down",16)}</span><div class="grow"><b>${esc(pn(t.pid))} × ${t.qty}</b><span class="s">${thD(t.date)}${b?"":`<span class="pf"> กำไร ฿${f(t.qty*(t.unit-t.costAt))}</span>`}</span></div><b class="${b?"out":"in"}">${b?"−":"+"}${f(t.qty*t.unit)}</b><button class="sm" onclick="delT('${t.id}')">ลบ</button></div>`}).join("")}</div>`:empty("ยังไม่มีรายการซื้อ-ขายในช่วงนี้","บันทึกการซื้อเข้าหรือขายออก แล้วจะแสดงที่นี่"))}
-function txList(){const T_=[];
- S.led.filter(l=>inM(l.date)).forEach(l=>{const jb=l.job&&S.jobs.find(j=>j.id===l.job);T_.push({id:l.id,date:l.date,type:l.type,cat:l.cat,note:l.note||"",amt:l.amt,job:l.job?(jb?jb.device:"ที่ลบแล้ว"):""})});
- S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.done||j.date)).forEach(j=>{const dt=j.done||j.date;T_.push({date:dt,type:"in",cat:"ค่าซ่อม",note:j.device+" "+cnj(j),amt:j.price||0,src:"งานซ่อม"});if(j.cost>0)T_.push({date:dt,type:"out",cat:"ต้นทุนอะไหล่งานซ่อม",note:j.device,amt:j.cost||0,src:"งานซ่อม"})});
- S.trx.filter(t=>inM(t.date)).forEach(t=>T_.push({date:t.date,type:t.type==="sell"?"in":"out",cat:t.type==="sell"?"ขายอะไหล่":"ซื้ออะไหล่เข้าสต๊อก",note:pn(t.pid)+" × "+t.qty,amt:t.qty*t.unit,src:"อะไหล่"}));
+ `<h3>ประวัติซื้อ-ขาย-เบิก</h3>`+(h.length?`<div class="list">${h.map(t=>{const b=t.type==="buy",u=t.type==="use",jb=u&&S.jobs.find(j=>j.id===t.job);return `<div class="li"><span class="tg ${u?"w":b?"o":"i"}">${ic(u?"jobs":b?"up":"down",16)}</span><div class="grow"><b>${u?"เบิก ":""}${esc(pn(t.pid))} × ${t.qty}</b><span class="s">${thD(t.date)}${u?` ${jb?(jb.q?"คิว "+jb.q+" ":"")+esc(jb.device):"งานที่ลบแล้ว"}`:b?"":`<span class="pf"> กำไร ฿${f(t.qty*(t.unit-t.costAt))}</span>`}</span></div>${u?`<b class="pf" style="color:var(--mu)">ต้นทุน ${f(t.qty*t.costAt)}</b>`:`<b class="${b?"out":"in"}">${b?"−":"+"}${f(t.qty*t.unit)}</b>`}<button class="sm" onclick="delT('${t.id}')">ลบ</button></div>`}).join("")}</div>`:empty("ยังไม่มีรายการซื้อ-ขาย-เบิกในช่วงนี้","บันทึกการซื้อเข้า ขายออก หรือเบิกอะไหล่ แล้วจะแสดงที่นี่"))}
+function txList(all){const ok=d=>all||inM(d),T_=[];
+ S.led.filter(l=>ok(l.date)).forEach(l=>{const jb=l.job&&S.jobs.find(j=>j.id===l.job);T_.push({id:l.id,date:l.date,type:l.type,cat:l.cat,note:l.note||"",amt:l.amt,acc:l.acc,job:l.job?(jb?jb.device:"ที่ลบแล้ว"):""})});
+ S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&ok(j.done||j.date)).forEach(j=>{const dt=j.done||j.date;T_.push({date:dt,type:"in",cat:"ค่าซ่อม",note:j.device+" "+cnj(j),amt:j.price||0,acc:j.acc,src:"งานซ่อม"});if(j.cost>0)T_.push({date:dt,type:"out",cat:"ต้นทุนอะไหล่งานซ่อม",note:j.device,amt:j.cost||0,src:"งานซ่อม"})});
+ S.trx.filter(t=>t.type!=="use"&&ok(t.date)).forEach(t=>T_.push({date:t.date,type:t.type==="sell"?"in":"out",cat:t.type==="sell"?"ขายอะไหล่":"ซื้ออะไหล่เข้าสต๊อก",note:pn(t.pid)+" × "+t.qty,amt:t.qty*t.unit,acc:t.acc,src:"อะไหล่"}));
  return T_}
-let LF="all";
-function vLed(){const all=txList(),i=sum(all.filter(x=>x.type==="in"),x=>x.amt),o=sum(all.filter(x=>x.type==="out"),x=>x.amt);
- const a=all.filter(x=>LF==="all"||x.type===LF),g={};a.forEach(x=>(g[x.date]=g[x.date]||[]).push(x));
+function accBal(a){let b=Number(a.open)||0;txList(true).forEach(x=>{if(x.acc===a.id)b+=x.type==="in"?x.amt:-x.amt});(S.xfer||[]).forEach(t=>{if(t.to===a.id)b+=t.amt;if(t.from===a.id)b-=t.amt});return b}
+function fAcc(id){const e=id?AC().find(a=>a.id===id):null;
+ form(e?"แก้ไขบัญชี":"เพิ่มบัญชี",[{k:"name",l:"ชื่อบัญชี (เช่น เงินสดหน้าร้าน, กสิกร)",v:e&&e.name},{k:"type",l:"ประเภท",v:e?e.type:"cash",o:[["cash","เงินสด"],["bank","บัญชีธนาคาร"]]},{k:"open",l:"ยอดตั้งต้น (บาท)",t:"number",v:e?e.open:""}],v=>{if(!v.name)return false;
+  if(e)Object.assign(e,v);else{S.acc=S.acc||[];S.acc.push({id:uid(),...v})}})}
+function delAcc(id){const a=AC().find(x=>x.id===id);if(!a||!confirm("ลบบัญชี "+a.name+"? รายการที่เคยบันทึกจะยังอยู่แต่ไม่ผูกกับบัญชี และรายการโอนเงินที่เกี่ยวข้องจะถูกลบ"))return;
+ [S.led,S.trx,S.jobs].forEach(l=>l.forEach(x=>{if(x.acc===id)delete x.acc}));S.xfer=(S.xfer||[]).filter(t=>t.from!==id&&t.to!==id);S.acc=S.acc.filter(x=>x.id!==id);AF="";R()}
+function fXfer(){const a=AC();if(a.length<2){alert("ต้องมีบัญชีอย่างน้อย 2 บัญชีจึงจะโอนเงินได้ กดการ์ด “เพิ่มบัญชี” ในหน้ารับ-จ่ายก่อน");return}
+ const fr=AF||a[0].id;
+ form("โอนเงินระหว่างบัญชี",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"from",l:"จากบัญชี",v:fr,o:accOpts().slice(1)},{k:"to",l:"ไปยังบัญชี",v:(a.find(x=>x.id!==fr)||a[1]).id,o:accOpts().slice(1)},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},{k:"note",l:"หมายเหตุ"}],v=>{
+  if(!v.amt||v.amt<=0)return false;if(v.from===v.to){alert("เลือกบัญชีต้นทางและปลายทางให้ต่างกัน");return false}
+  S.xfer=S.xfer||[];S.xfer.push({id:uid(),...v})})}
+let LF="all",AF="";
+function accSec(){const a=AC(),cur=a.find(x=>x.id===AF),own=ME.role==="owner";if(!a.length&&!own)return"";
+ return `<div class="pf"><div class="top" style="margin:0 0 8px"><h3 style="margin:0">บัญชีหมุนเวียน</h3>${a.length?`<span class="s">รวม ฿${f(sum(a,accBal))}</span>`:""}</div>
+ <div class="chips accs">${a.map(x=>{const b=accBal(x);return `<button class="acc${AF===x.id?" on":""}" onclick="AF=AF==='${x.id}'?'':'${x.id}';R()"><span class="s">${x.type==="bank"?"บัญชีธนาคาร":"เงินสด"}</span><b>${esc(x.name)}</b><span class="bal${b<0?" out":""}">฿${f(b)}</span></button>`}).join("")}${own?`<button class="acc add" onclick="fAcc()">${ic("plus",18)}<span>เพิ่มบัญชี</span></button>`:""}</div>
+ ${a.length?"":'<p class="s" style="margin:-4px 0 12px">เพิ่มบัญชีเงินสดหรือบัญชีธนาคาร เพื่อดูยอดคงเหลือและโอนเงินระหว่างบัญชี</p>'}
+ ${cur&&own?`<div class="row2"><span class="s">กำลังดูเฉพาะบัญชี ${esc(cur.name)}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fAcc('${cur.id}')">แก้ไขบัญชี</button><button class="sm" onclick="delAcc('${cur.id}')">ลบบัญชี</button></span></div>`:""}</div>`}
+function vLed(){const base=txList().filter(x=>!AF||x.acc===AF),i=sum(base.filter(x=>x.type==="in"),x=>x.amt),o=sum(base.filter(x=>x.type==="out"),x=>x.amt);
+ const xf=(S.xfer||[]).filter(t=>inM(t.date)&&(!AF||t.from===AF||t.to===AF)).map(t=>({id:t.id,date:t.date,type:"xfer",cat:"โอนเงิน",note:accName(t.from)+" → "+accName(t.to)+(t.note?" "+t.note:""),amt:t.amt,from:t.from,to:t.to}));
+ const rows=[...base,...xf].filter(x=>LF==="all"||x.type===LF),g={};rows.forEach(x=>(g[x.date]=g[x.date]||[]).push(x));
  const chip=(k,l)=>`<button class="chip${LF===k?" on":""}" onclick="LF='${k}';R()">${l}</button>`;
- return `<div class="top"><h2 class="pt">รายรับ-จ่าย</h2></div>
+ const sg=x=>x.type==="xfer"?(AF?(x.to===AF?"+":"−"):""):(x.type==="in"?"+":"−"),cl=x=>x.type==="xfer"?(AF?(x.to===AF?"in":"out"):""):x.type;
+ return `<div class="top"><h2 class="pt">รายรับ-จ่าย</h2></div>${accSec()}
  <div class="tiles pf"><div class="tile"><span class="k">รายรับ ${thM(M)}</span><b class="in">฿${f(i)}</b></div><div class="tile"><span class="k">รายจ่าย ${thM(M)}</span><b class="out">฿${f(o)}</b></div></div>
- <div class="chips">${chip("all","ทั้งหมด")}${chip("in","รายรับ")}${chip("out","รายจ่าย")}</div>`+(a.length?Object.keys(g).sort().reverse().map(d=>`<h3>${thD(d)}</h3><div class="list">${g[d].map(x=>`<div class="li${x.src&&x.type==="out"?" pf":""}"><span class="tg ${x.type==="in"?"i":"o"}">${ic(x.type==="in"?"down":"up",16)}</span><div class="grow"><b>${esc(x.cat)}</b><span class="s">${esc(x.note)}${x.job?` <span class="rl">งาน ${esc(x.job)}</span>`:""}</span></div><b class="${x.type}">${x.type==="in"?"+":"−"}${f(x.amt)}</b>${x.id?`<button class="sm" onclick="del('led','${x.id}')">ลบ</button>`:`<span class="rl">${x.src}</span>`}</div>`).join("")}</div>`).join(""):empty("ยังไม่มีรายการในช่วงนี้","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกค่าเช่า ค่าไฟ หรือรายรับอื่นๆ"))+'<p class="s">รายการที่มีป้าย “งานซ่อม” หรือ “อะไหล่” มาจากหน้าอื่นโดยอัตโนมัติ แก้ไขหรือลบที่หน้านั้น</p>'}
+ <div class="chips">${chip("all","ทั้งหมด")}${chip("in","รายรับ")}${chip("out","รายจ่าย")}</div>`+(rows.length?Object.keys(g).sort().reverse().map(d=>`<h3>${thD(d)}</h3><div class="list">${g[d].map(x=>`<div class="li${x.type==="xfer"||(x.src&&x.type==="out")?" pf":""}"><span class="tg ${x.type==="xfer"?"b":x.type==="in"?"i":"o"}">${ic(x.type==="xfer"?"swap":x.type==="in"?"down":"up",16)}</span><div class="grow"><b>${esc(x.cat)}</b><span class="s">${esc(x.note)}${x.job?` <span class="rl">งาน ${esc(x.job)}</span>`:""}${x.type!=="xfer"&&accName(x.acc)?` <span class="rl">${esc(accName(x.acc))}</span>`:""}</span></div><b class="${cl(x)}">${sg(x)}${f(x.amt)}</b>${x.id?`<button class="sm" onclick="del('${x.type==="xfer"?"xfer":"led"}','${x.id}')">ลบ</button>`:`<span class="rl">${x.src}</span>`}</div>`).join("")}</div>`).join(""):empty("ยังไม่มีรายการในช่วงนี้","กดปุ่ม + มุมขวาล่าง เพื่อบันทึกค่าเช่า ค่าไฟ หรือรายรับอื่นๆ"))+'<p class="s">รายการที่มีป้าย “งานซ่อม” หรือ “อะไหล่” มาจากหน้าอื่นโดยอัตโนมัติ แก้ไขหรือลบที่หน้านั้น</p>'}
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function form(title,fields,ok){$("#mod").classList.remove("ctr");
  $("#mbody").innerHTML=`<div class="grab"></div><h2>${title}</h2>`+fields.map(x=>`<label>${x.l}</label>`+(x.o?`<select id="f_${x.k}">${x.o.map(o=>`<option value="${esc(o[0])}"${o[0]===x.v?" selected":""}>${esc(o[1])}</option>`).join("")}</select>`:x.t==="textarea"?`<textarea id="f_${x.k}" rows="3">${esc(x.v??"")}</textarea>`:`<input id="f_${x.k}" type="${x.t||"text"}" value="${esc(x.v??"")}" inputmode="${x.t==="number"?"decimal":"text"}">`)).join("")+
@@ -312,9 +346,10 @@ const partOpts=()=>S.parts.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`])
 function fCust(id){const e=id?S.cust.find(c=>c.id===id):null;
  form(e?"แก้ไขข้อมูลลูกค้า":"เพิ่มลูกค้า",[{k:"name",l:"ชื่อ",v:e&&e.name},{k:"phone",l:"เบอร์โทร",t:"tel",v:e&&e.phone},{k:"note",l:"หมายเหตุ / รายละเอียด",t:"textarea",v:e&&e.note}],v=>{if(!v.name)return false;if(e)Object.assign(e,v);else S.cust.push({id:uid(),...v})})}
 function fJob(id,pc){const e=id?S.jobs.find(j=>j.id===id):null,g=k=>e&&e[k]!=null?e[k]:undefined;
- form(e?"แก้ไขงานซ่อม":"รับงานซ่อม",[{k:"date",l:"วันที่รับงาน",t:"date",v:e?e.date:today()},...(e&&e.status==="รับเครื่องแล้ว"?[{k:"done",l:"วันที่ลูกค้ามารับเครื่อง",t:"date",v:e.done||e.date}]:[]),{k:"cust",l:"ลูกค้า",v:e?e.cust:(pc||""),o:custOpts()},{k:"name",l:"ชื่อลูกค้า (ลูกค้าทั่วไป)",v:g("cname")},{k:"phone",l:"เบอร์ติดต่อ",t:"tel",v:g("cphone")},{k:"device",l:"รุ่นเครื่อง",v:g("device")},{k:"issue",l:"อาการเสีย",v:g("issue")},{k:"detail",l:"รายละเอียดเพิ่มเติม",t:"textarea",v:g("detail")},{k:"pass",l:"รหัสผ่าน / รหัสปลดล็อกเครื่อง (ถ้ามี)",v:g("pass")},...(e?[{k:"price",l:"ค่าซ่อม (บาท) เว้นว่างถ้ายังไม่กำหนด",t:"number",blank:true,v:g("price")},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number",blank:true,v:g("cost")}]:[])],
- v=>{if(!v.device)return false;const {name,phone,...r}=v;if(!r.cust){if(name)r.cname=name;if(phone)r.cphone=phone}if(!r.done)delete r.done;if(r.price==null)delete r.price;if(r.cost==null)delete r.cost;
-  if(e){delete e.cname;delete e.cphone;Object.assign(e,r)}else S.jobs.push({id:uid(),status:"รับเครื่อง",...r})});
+ form(e?"แก้ไขงานซ่อม":"รับงานซ่อม",[{k:"date",l:"วันที่รับงาน",t:"date",v:e?e.date:today()},...(e&&e.status==="รับเครื่องแล้ว"?[{k:"done",l:"วันที่ลูกค้ามารับเครื่อง",t:"date",v:e.done||e.date}]:[]),{k:"cust",l:"ลูกค้า",v:e?e.cust:(pc||""),o:custOpts()},{k:"name",l:"ชื่อลูกค้า (ลูกค้าทั่วไป)",v:g("cname")},{k:"phone",l:"เบอร์ติดต่อ",t:"tel",v:g("cphone")},{k:"device",l:"รุ่นเครื่อง",v:g("device")},{k:"issue",l:"อาการเสีย",v:g("issue")},{k:"detail",l:"รายละเอียดเพิ่มเติม",t:"textarea",v:g("detail")},{k:"pass",l:"รหัสผ่าน / รหัสปลดล็อกเครื่อง (ถ้ามี)",v:g("pass")},{k:"est",l:"ราคาประเมิน (บาท) เว้นว่างได้",t:"number",blank:true,v:g("est")},{k:"war",l:"การรับประกันงานซ่อม",v:e&&e.war===false?"no":"yes",o:[["yes","มีประกัน "+WD+" วัน นับจากวันที่ลูกค้ามารับเครื่อง"],["no","ไม่มีประกัน"]]},...(e?[{k:"price",l:"ราคาจริง (บาท) เว้นว่างถ้ายังไม่กำหนด",t:"number",blank:true,v:g("price")},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท)",t:"number",blank:true,v:g("cost")},...(AC().length?[{k:"acc",l:"รับเงินเข้าบัญชี",v:e.acc||"",o:accOpts()}]:[])]:[])],
+ v=>{if(!v.device)return false;const {name,phone,est,war,...r}=v;if(!r.cust){if(name)r.cname=name;if(phone)r.cphone=phone}if(!r.done)delete r.done;if(r.price==null)delete r.price;if(r.cost==null)delete r.cost;
+  if(e){delete e.cname;delete e.cphone;delete e.est;delete e.war;if(war==="no")e.war=false;if("acc" in r){if(r.acc)e.acc=r.acc;else delete e.acc;delete r.acc}Object.assign(e,r);if(est!=null)e.est=est}
+  else{if(est!=null)r.est=est;if(war==="no")r.war=false;const q=nextQ();S.jobs.push({id:uid(),q,status:"รับเครื่อง",...r});toast("รับงานแล้ว คิวที่ "+q)}});
  const sel=$("#f_cust"),nm=$("#f_name"),ph=$("#f_phone"),btn=document.createElement("button");
  btn.type="button";btn.className="gh";btn.style.marginTop="10px";btn.textContent="+ เพิ่มไปยังรายการลูกค้า";ph.after(btn);
  const sync=()=>{const g=!sel.value;[nm,ph].forEach(x=>{x.style.display=g?"":"none";x.previousElementSibling.style.display=g?"":"none"});btn.style.display=g?"":"none"};
@@ -324,32 +359,40 @@ function fJob(id,pc){const e=id?S.jobs.find(j=>j.id===id):null,g=k=>e&&e[k]!=nul
   sel.insertAdjacentHTML("beforeend",`<option value="${c.id}">${esc(n)}</option>`);sel.value=c.id;nm.value="";ph.value="";sync()}}
 function fPart(){form("อะไหล่ใหม่",[{k:"name",l:"ชื่ออะไหล่"},{k:"price",l:"ราคาขาย (บาท)",t:"number"}],v=>{if(!v.name)return false;S.parts.push({id:uid(),name:v.name,qty:0,cost:0,price:v.price})})}
 function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่ก่อน");return}const p0=S.parts[0];
- form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:type==="sell"?p0.price:""}],v=>{
+ form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:type==="sell"?p0.price:""},...(AC().length?[{k:"acc",l:type==="buy"?"จ่ายจากบัญชี":"รับเงินเข้าบัญชี",v:defAcc(),o:accOpts()}]:[])],v=>{
   const p=S.parts.find(x=>x.id===v.pid);if(!p||v.qty<=0)return false;
   if(type==="buy"){p.cost=(p.qty*p.cost+v.qty*v.unit)/(p.qty+v.qty);p.qty+=v.qty;if(!p.price)p.price=v.unit*1.5}
   else{if(v.qty>p.qty){alert("สต๊อกไม่พอ");return false}p.qty-=v.qty}
-  S.trx.push({id:uid(),type,date:v.date,pid:v.pid,qty:v.qty,unit:v.unit,costAt:p.cost})})}
+  S.trx.push({id:uid(),type,date:v.date,pid:v.pid,qty:v.qty,unit:v.unit,costAt:p.cost,...(v.acc?{acc:v.acc}:{})})})}
 function fLed(type,job){const js=S.jobs.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
- form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","ค่าบริการเพิ่ม","อื่นๆ"]:["ค่าอะไหล่ซื้อนอก","ค่าแรงช่างนอก","ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},{k:"note",l:"รายละเอียด"},{k:"job",l:"เชื่อมกับงานซ่อม (ถ้ามี)",v:job||"",o:[["","ไม่เชื่อมกับงานซ่อม"],...js.map(j=>[j.id,`${j.device} (${cnj(j)})`])]}],v=>{if(!v.amt)return false;if(!v.job)delete v.job;S.led.push({id:uid(),type,...v})})}
+ form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","ค่าบริการเพิ่ม","อื่นๆ"]:["ค่าอะไหล่ซื้อนอก","ค่าแรงช่างนอก","ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},...(AC().length?[{k:"acc",l:type==="in"?"รับเข้าบัญชี":"จ่ายจากบัญชี",v:defAcc(),o:accOpts()}]:[]),{k:"note",l:"รายละเอียด"},{k:"job",l:"เชื่อมกับงานซ่อม (ถ้ามี)",v:job||"",o:[["","ไม่เชื่อมกับงานซ่อม"],...js.map(j=>[j.id,`${j.device} (${cnj(j)})`])]}],v=>{if(!v.amt)return false;if(!v.job)delete v.job;if(!v.acc)delete v.acc;S.led.push({id:uid(),type,...v})})}
 let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
-function setStatus(j,st){j.status=st;if(st==="รับเครื่องแล้ว"){j.done=j.done||today();toast("ย้ายไปที่เมนู “ประกัน” แล้ว นับ 30 วันจากวันนี้")}else delete j.done;R()}
-function jst(id,st){const j=S.jobs.find(x=>x.id===id);if(st===j.status)return;const ix=k=>STAT.indexOf(k),fin=ix("กำลังซ่อม");
+function setStatus(j,st){j.status=st;if(st==="รับเครื่องแล้ว"){j.done=j.done||today();toast(hasW(j)?"ย้ายไปที่เมนู “ประกัน” แล้ว นับ "+WD+" วันจากวันนี้":"ย้ายไปที่เมนู “ประกัน” แล้ว (งานนี้ไม่มีประกัน)")}else delete j.done;R()}
+function jst(id,st){const j=S.jobs.find(x=>x.id===id);if(st===j.status)return;const ix=k=>STAT.indexOf(k),fin=ix("ซ่อมเสร็จ");
  if(ix(st)>=fin&&(ix(j.status)<fin||j.price==null)){fFinish(id,st);return}
  setStatus(j,st)}
 function fFinish(id,st){const j=S.jobs.find(x=>x.id===id);
- form("กำหนดค่าซ่อม "+j.device,[{k:"price",l:"ค่าซ่อม (บาท)",t:"number",blank:true,v:j.price==null?"":j.price},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท) เว้นว่างถ้าไม่มี",t:"number",blank:true,v:j.cost==null?"":j.cost}],v=>{
-  if(v.price==null){alert("กรอกค่าซ่อมก่อน (ถ้าไม่คิดเงินให้ใส่ 0)");return false}
-  j.price=v.price;j.cost=v.cost||0;setStatus(j,st)});
- $("#mod").classList.add("ctr");setTimeout(()=>{const e=$("#f_price");if(e)e.focus()},60)}
+ form("ซ่อมเสร็จ: ราคาจริง "+j.device,[{k:"price",l:"ราคาจริง (บาท)"+(j.est!=null?" ประเมินไว้ ฿"+f(j.est):""),t:"number",blank:true,v:j.price!=null?j.price:(j.est!=null?j.est:"")},{k:"cost",l:"ต้นทุนอะไหล่ที่ซื้อนอกสต๊อก (บาท) เว้นว่างถ้าไม่มี",t:"number",blank:true,v:j.cost==null?"":j.cost},...(AC().length?[{k:"acc",l:"รับเงินเข้าบัญชี",v:j.acc||defAcc(),o:accOpts()}]:[])],v=>{
+  if(v.price==null){alert("กรอกราคาจริงก่อน (ถ้าไม่คิดเงินให้ใส่ 0)");return false}
+  j.price=v.price;j.cost=v.cost||0;if("acc" in v){if(v.acc)j.acc=v.acc;else delete j.acc}setStatus(j,st)});
+ setTimeout(()=>{const e=$("#f_price");if(e)e.focus()},60)}
 function unpick(id){if(!confirm("ยกเลิกการรับเครื่อง? งานจะกลับไปอยู่ในรายการงานซ่อม (สถานะ ซ่อมเสร็จ)"))return;const j=S.jobs.find(x=>x.id===id);j.status="ซ่อมเสร็จ";delete j.done;R()}
-function del(k,id){if(confirm("ลบรายการนี้?")){S[k]=S[k].filter(x=>x.id!==id);R()}}
+function del(k,id){if(!confirm("ลบรายการนี้?"))return;if(k==="jobs"){S.trx.filter(t=>t.type==="use"&&t.job===id).forEach(t=>{const p=S.parts.find(x=>x.id===t.pid);if(p)p.qty+=t.qty});S.trx=S.trx.filter(t=>!(t.type==="use"&&t.job===id))}S[k]=S[k].filter(x=>x.id!==id);R()}
+function fUse(jid){const open=S.jobs.filter(j=>j.status!=="รับเครื่องแล้ว").sort((a,b)=>(a.q||1e9)-(b.q||1e9)),ps=S.parts.filter(p=>p.qty>0);
+ if(!S.parts.length){alert("ยังไม่มีอะไหล่ในสต๊อก เพิ่มอะไหล่และบันทึกการซื้อเข้าก่อน");return}
+ if(!ps.length){alert("อะไหล่ในสต๊อกหมดทุกรายการ");return}
+ if(!open.length){alert("ไม่มีงานซ่อมที่ค้างอยู่ให้เบิกอะไหล่");return}
+ form("เบิกอะไหล่จากสต๊อก",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"job",l:"เบิกให้งานซ่อม",v:jid||open[0].id,o:open.map(j=>[j.id,(j.q?"คิว "+j.q+" ":"")+j.device+" ("+cnj(j)+")"])},{k:"pid",l:"อะไหล่",o:ps.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`])},{k:"qty",l:"จำนวน",t:"number",v:1}],v=>{
+  const p=S.parts.find(x=>x.id===v.pid);if(!p||!(v.qty>0))return false;
+  if(v.qty>p.qty){alert("สต๊อกไม่พอ เหลือ "+p.qty+" ชิ้น");return false}
+  p.qty-=v.qty;S.trx.push({id:uid(),type:"use",date:v.date,pid:v.pid,qty:v.qty,unit:0,costAt:p.cost,job:v.job});toast("เบิกอะไหล่แล้ว")})}
 function delT(id){const t=S.trx.find(x=>x.id===id),p=S.parts.find(x=>x.id===t.pid);
- if(!confirm("ลบรายการนี้? (ปรับสต๊อกกลับให้)"))return;
- if(p){if(t.type==="sell")p.qty+=t.qty;else p.qty=Math.max(0,p.qty-t.qty)}
+ if(!confirm(t.type==="use"?"คืนอะไหล่เข้าสต๊อก และลบรายการเบิกนี้?":"ลบรายการนี้? (ปรับสต๊อกกลับให้)"))return;
+ if(p){if(t.type==="buy")p.qty=Math.max(0,p.qty-t.qty);else p.qty+=t.qty}
  S.trx=S.trx.filter(x=>x.id!==id);R()}
 function exp_(){const t=JSON.stringify(S);form("สำรองข้อมูล (คัดลอกข้อความนี้เก็บไว้)",[],()=>{});$("#mbody").insertAdjacentHTML("afterbegin","");
  $("#mbody").innerHTML=`<b>สำรองข้อมูล</b><label>คัดลอกข้อความทั้งหมดไปเก็บไว้</label><textarea rows="8" readonly onclick="this.select()">${esc(t)}</textarea><div class="bar"><button class="gh" onclick="closeM()">ปิด</button></div>`}
 function imp_(){$("#mbody").innerHTML=`<b>นำเข้าข้อมูล</b><label>วางข้อความสำรองที่นี่ (จะแทนที่ข้อมูลปัจจุบัน)</label><textarea id="imp" rows="8"></textarea><div class="bar"><button class="pr" onclick="doImp()">นำเข้า</button><button class="gh" onclick="closeM()">ยกเลิก</button></div>`;$("#mod").classList.add("show")}
-function doImp(){try{const d=JSON.parse($("#imp").value);if(!d.jobs||!d.parts)throw 0;S=Object.assign({},def,d);closeM()}catch(e){alert("ข้อมูลไม่ถูกต้อง")}}
+function doImp(){try{const d=JSON.parse($("#imp").value);if(!d.jobs||!d.parts)throw 0;S=Object.assign({},def,d);ensureQ();closeM()}catch(e){alert("ข้อมูลไม่ถูกต้อง")}}
 init();
 </script></body></html>
