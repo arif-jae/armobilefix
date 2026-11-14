@@ -117,6 +117,7 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 .row2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 12px}
 .tg.w{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#d97706}
 .us{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}.rl .x{border:0;background:none;color:var(--mu);margin-left:4px;padding:0 2px;cursor:pointer;font-size:15px;line-height:1}
+.chip.add{border-style:dashed;color:var(--mu)}.gb .chips{margin-bottom:8px}
 .qn{background:var(--ink);color:var(--ac);font:600 12px Prompt,sans-serif;padding:1px 9px;border-radius:6px}.qrow{display:flex;gap:6px;align-items:center;align-self:flex-start;margin-bottom:4px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
@@ -133,12 +134,12 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 const SUPABASE_URL="https://lbmiywdkdrdwmwlmuzeh.supabase.co";
 const SUPABASE_KEY="sb_publishable_2Cn8tWZin5thCimvtjGuug_QdiGrMkF";
 /* ================================================== */
-const def={cust:[],jobs:[],parts:[],trx:[],led:[],acc:[],xfer:[]};
+const def={cust:[],jobs:[],parts:[],trx:[],led:[],acc:[],xfer:[],grp:[]};
 const KINDS=Object.keys(def);
 let S=JSON.parse(JSON.stringify(def)),snap=new Map(),busy=false,again=false,tm;
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 async function loadAll(){
- const N={cust:[],jobs:[],parts:[],trx:[],led:[],acc:[],xfer:[]};snap=new Map();
+ const N={cust:[],jobs:[],parts:[],trx:[],led:[],acc:[],xfer:[],grp:[]};snap=new Map();
  for(let from=0;;from+=1000){
   const {data,error}=await sb.from("shop_data").select("id,kind,data").order("id").range(from,from+999);
   if(error){alert("โหลดข้อมูลไม่สำเร็จ: "+error.message);break}
@@ -299,9 +300,9 @@ function vCD(c){const js=S.jobs.filter(j=>j.cust===c.id).sort((a,b)=>b.date.loca
  <div class="tiles t3"><div class="tile"><span class="k">งานซ่อม</span><b>${js.length} ครั้ง</b></div><div class="tile"><span class="k">ยอดรวม</span><b>฿${f(sum(js,j=>j.price||0))}</b></div><div class="tile"><span class="k">ในประกัน</span><b>${war} งาน</b></div></div>
  <h3>ประวัติการซ่อม</h3>`+(js.length?js.map(hc).join(""):empty("ยังไม่เคยซ่อม","กด “รับงานซ่อม” เพื่อบันทึกงานแรกของลูกค้าคนนี้"))}
 function vCust(){const c=CV&&S.cust.find(x=>x.id===CV);if(c)return vCD(c);return `<div class="top"><h2 class="pt">ลูกค้า</h2></div><input class="srch" type="search" placeholder="ค้นหาชื่อหรือเบอร์โทร" value="${esc(CQ)}" oninput="CQ=this.value;$('#clist').innerHTML=cList()"><div id="clist">${cList()}</div>`}
-function vParts(){const h=S.trx.filter(t=>inM(t.date)).sort((x,y)=>y.date.localeCompare(x.date));
+function vParts(){if(GF&&!GR().find(g=>g.id===GF))GF="";const vis=GF?S.parts.filter(p=>gIds(GF).includes(p.grp)):S.parts;const h=S.trx.filter(t=>inM(t.date)).sort((x,y)=>y.date.localeCompare(x.date));
  return `<div class="top"><h2 class="pt">อะไหล่</h2></div>
- <h3 style="margin-top:4px">สต๊อกคงเหลือ</h3>`+(S.parts.length?`<div class="list">${S.parts.map(p=>{const m=p.price>0?Math.round((p.price-p.cost)/p.price*100):0,low=p.qty<=2;return `<div class="li"><div class="grow"><b>${esc(p.name)}</b><span class="s">ทุน ฿${f(p.cost)} ขาย ฿${f(p.price)}<span class="pf"> กำไร ${m}%</span></span><div class="lvl"><i class="${low?"low":""}" style="width:${Math.min(100,p.qty*10)}%"></i></div></div><div class="qty${low?" low":""}"><b>${p.qty}</b><span class="s">${low?"ใกล้หมด":"ชิ้น"}</span></div><button class="sm" onclick="del('parts','${p.id}')">ลบ</button></div>`}).join("")}</div>`:empty("ยังไม่มีอะไหล่","กดปุ่ม + แล้วเลือก “เพิ่มอะไหล่ใหม่” จากนั้นบันทึกการซื้อเข้า สต๊อกและต้นทุนจะคำนวณให้เอง"))+
+ ${gBar()}<h3 style="margin-top:4px">สต๊อกคงเหลือ</h3>`+(vis.length?`<div class="list">${vis.map(p=>{const m=p.price>0?Math.round((p.price-p.cost)/p.price*100):0,low=p.qty<=2;return `<div class="li"><button class="lm" onclick="fPart('${p.id}')" aria-label="แก้ไข ${esc(p.name)}"><div class="grow"><b>${esc(p.name)}</b>${p.grp&&gPath(p.grp).length?`<span class="s">${esc(gPath(p.grp).join(" › "))}</span>`:""}<span class="s">ทุน ฿${f(p.cost)} ขาย ฿${f(p.price)}<span class="pf"> กำไร ${m}%</span></span><div class="lvl"><i class="${low?"low":""}" style="width:${Math.min(100,p.qty*10)}%"></i></div></div></button><div class="qty${low?" low":""}"><b>${p.qty}</b><span class="s">${low?"ใกล้หมด":"ชิ้น"}</span></div><button class="sm" onclick="del('parts','${p.id}')">ลบ</button></div>`}).join("")}</div>`:empty(S.parts.length?"ยังไม่มีอะไหล่ในกลุ่มนี้":"ยังไม่มีอะไหล่",S.parts.length?"กดปุ่ม + แล้วเลือก “เพิ่มอะไหล่ใหม่” (กลุ่มที่เลือกจะถูกใส่ให้อัตโนมัติ)":"กดปุ่ม + แล้วเลือก “เพิ่มอะไหล่ใหม่” จากนั้นบันทึกการซื้อเข้า สต๊อกและต้นทุนจะคำนวณให้เอง"))+
  `<h3>ประวัติซื้อ-ขาย-เบิก</h3>`+(h.length?`<div class="list">${h.map(t=>{const b=t.type==="buy",u=t.type==="use",jb=u&&S.jobs.find(j=>j.id===t.job);return `<div class="li"><span class="tg ${u?"w":b?"o":"i"}">${ic(u?"jobs":b?"up":"down",16)}</span><div class="grow"><b>${u?"เบิก ":""}${esc(pn(t.pid))} × ${t.qty}</b><span class="s">${thD(t.date)}${u?` ${jb?(jb.q?"คิว "+jb.q+" ":"")+esc(jb.device):"งานที่ลบแล้ว"}`:b?"":`<span class="pf"> กำไร ฿${f(t.qty*(t.unit-t.costAt))}</span>`}</span></div>${u?`<b class="pf" style="color:var(--mu)">ต้นทุน ${f(t.qty*t.costAt)}</b>`:`<b class="${b?"out":"in"}">${b?"−":"+"}${f(t.qty*t.unit)}</b>`}<button class="sm" onclick="delT('${t.id}')">ลบ</button></div>`}).join("")}</div>`:empty("ยังไม่มีรายการซื้อ-ขาย-เบิกในช่วงนี้","บันทึกการซื้อเข้า ขายออก หรือเบิกอะไหล่ แล้วจะแสดงที่นี่"))}
 function txList(all){const ok=d=>all||inM(d),T_=[];
  S.led.filter(l=>ok(l.date)).forEach(l=>{const jb=l.job&&S.jobs.find(j=>j.id===l.job);T_.push({id:l.id,date:l.date,type:l.type,cat:l.cat,note:l.note||"",amt:l.amt,acc:l.acc,job:l.job?(jb?jb.device:"ที่ลบแล้ว"):""})});
@@ -342,7 +343,15 @@ function form(title,fields,ok){$("#mod").classList.remove("ctr");
 function closeM(){$("#mod").classList.remove("show","ctr");R()}
 $("#mod").onclick=e=>{if(e.target.id==="mod")closeM()};
 const custOpts=()=>[["","ลูกค้าทั่วไป"],...S.cust.map(c=>[c.id,c.name])];
-const partOpts=()=>S.parts.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`]);
+const GR=()=>S.grp||[];
+const gKids=id=>GR().filter(g=>(g.parent||"")===id).sort((a,b)=>a.name.localeCompare(b.name,"th"));
+const gChain=id=>{const o=[];let g=GR().find(x=>x.id===id),n=0;while(g&&n++<20){o.unshift(g);g=GR().find(x=>x.id===g.parent)}return o};
+const gPath=id=>gChain(id).map(g=>g.name);
+const gIds=id=>{const r=[id];gKids(id).forEach(c=>r.push(...gIds(c.id)));return r};
+const gFlat=(pid="")=>gKids(pid).flatMap(g=>[[g.id,gPath(g.id).join(" › ")],...gFlat(g.id)]);
+const gOpts=()=>[["","ไม่ระบุกลุ่ม"],...gFlat()];
+const pLbl=p=>`${p.name}${p.grp&&gPath(p.grp).length?" ["+gPath(p.grp).join(" › ")+"]":""} (เหลือ ${p.qty})`;
+const partOpts=()=>S.parts.map(p=>[p.id,pLbl(p)]);
 function fCust(id){const e=id?S.cust.find(c=>c.id===id):null;
  form(e?"แก้ไขข้อมูลลูกค้า":"เพิ่มลูกค้า",[{k:"name",l:"ชื่อ",v:e&&e.name},{k:"phone",l:"เบอร์โทร",t:"tel",v:e&&e.phone},{k:"note",l:"หมายเหตุ / รายละเอียด",t:"textarea",v:e&&e.note}],v=>{if(!v.name)return false;if(e)Object.assign(e,v);else S.cust.push({id:uid(),...v})})}
 function fJob(id,pc){const e=id?S.jobs.find(j=>j.id===id):null,g=k=>e&&e[k]!=null?e[k]:undefined;
@@ -357,7 +366,21 @@ function fJob(id,pc){const e=id?S.jobs.find(j=>j.id===id):null,g=k=>e&&e[k]!=nul
  btn.onclick=()=>{const n=nm.value.trim();if(!n){nm.focus();nm.style.borderColor="var(--out)";return}
   const c={id:uid(),name:n,phone:ph.value.trim()};S.cust.push(c);
   sel.insertAdjacentHTML("beforeend",`<option value="${c.id}">${esc(n)}</option>`);sel.value=c.id;nm.value="";ph.value="";sync()}}
-function fPart(){form("อะไหล่ใหม่",[{k:"name",l:"ชื่ออะไหล่"},{k:"price",l:"ราคาขาย (บาท)",t:"number"}],v=>{if(!v.name)return false;S.parts.push({id:uid(),name:v.name,qty:0,cost:0,price:v.price})})}
+function fPart(id){const e=id?S.parts.find(p=>p.id===id):null;
+ form(e?"แก้ไขอะไหล่":"อะไหล่ใหม่",[{k:"name",l:"ชื่ออะไหล่",v:e&&e.name},{k:"grp",l:"ประเภท / กลุ่ม (เพิ่มกลุ่มได้ที่หน้าอะไหล่)",v:e?(e.grp||""):GF,o:gOpts()},{k:"price",l:"ราคาขาย (บาท)",t:"number",v:e&&e.price}],v=>{if(!v.name)return false;
+  if(e){e.name=v.name;e.price=v.price;if(v.grp)e.grp=v.grp;else delete e.grp}else S.parts.push({id:uid(),name:v.name,qty:0,cost:0,price:v.price,...(v.grp?{grp:v.grp}:{})})})}
+let GF="";
+function fGrp(parent,id){const e=id?GR().find(g=>g.id===id):null;
+ form(e?"แก้ไขชื่อกลุ่ม":(parent?"เพิ่มกลุ่มย่อยใน "+gPath(parent).join(" › "):"เพิ่มประเภทอะไหล่"),[{k:"name",l:e?"ชื่อกลุ่ม":(parent?"ชื่อกลุ่มย่อย (เช่น ยี่ห้อ หรือ รุ่น)":"ชื่อประเภท (เช่น จอ, แบตเตอรี่, ชุดชาร์จ)"),v:e&&e.name}],v=>{if(!v.name)return false;
+  if(e)e.name=v.name;else{S.grp=S.grp||[];const g={id:uid(),name:v.name};if(parent)g.parent=parent;S.grp.push(g);GF=g.id}})}
+function delGrp(id){const g=GR().find(x=>x.id===id);if(!g)return;const ids=gIds(id),n=S.parts.filter(p=>ids.includes(p.grp)).length;
+ if(!confirm("ลบกลุ่ม "+g.name+(ids.length>1?" และกลุ่มย่อยทั้งหมด":"")+"? อะไหล่"+(n?" "+n+" รายการ":"")+"จะยังอยู่ แต่ไม่ระบุกลุ่ม"))return;
+ S.parts.forEach(p=>{if(ids.includes(p.grp))delete p.grp});S.grp=GR().filter(x=>!ids.includes(x.id));GF=g.parent||"";R()}
+function gBar(){const chain=GF?gChain(GF):[],cnt=id=>S.parts.filter(p=>gIds(id).includes(p.grp)).length;let rows="";
+ [""].concat(chain.map(g=>g.id)).forEach((pid,i)=>{const sel=chain[i]?chain[i].id:"";
+  rows+=`<div class="chips">${i===0?`<button class="chip${!GF?" on":""}" onclick="GF='';R()">ทั้งหมด <b>${S.parts.length}</b></button>`:""}${gKids(pid).map(k=>`<button class="chip${sel===k.id?" on":""}" onclick="GF='${k.id}';R()">${esc(k.name)} <b>${cnt(k.id)}</b></button>`).join("")}<button class="chip add" onclick="fGrp('${pid}')">${ic("plus",14)} ${i===0?"ประเภท":"กลุ่มย่อย"}</button></div>`});
+ const cur=chain[chain.length-1];
+ return `<div class="gb">${rows}${cur?`<div class="row2"><span class="s">${esc(chain.map(g=>g.name).join(" › "))}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fGrp('${cur.parent||""}','${cur.id}')">แก้ไขชื่อกลุ่ม</button><button class="sm" onclick="delGrp('${cur.id}')">ลบกลุ่ม</button></span></div>`:""}</div>`}
 function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่ก่อน");return}const p0=S.parts[0];
  form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:type==="sell"?p0.price:""},...(AC().length?[{k:"acc",l:type==="buy"?"จ่ายจากบัญชี":"รับเงินเข้าบัญชี",v:defAcc(),o:accOpts()}]:[])],v=>{
   const p=S.parts.find(x=>x.id===v.pid);if(!p||v.qty<=0)return false;
@@ -382,7 +405,7 @@ function fUse(jid){const open=S.jobs.filter(j=>j.status!=="รับเครื
  if(!S.parts.length){alert("ยังไม่มีอะไหล่ในสต๊อก เพิ่มอะไหล่และบันทึกการซื้อเข้าก่อน");return}
  if(!ps.length){alert("อะไหล่ในสต๊อกหมดทุกรายการ");return}
  if(!open.length){alert("ไม่มีงานซ่อมที่ค้างอยู่ให้เบิกอะไหล่");return}
- form("เบิกอะไหล่จากสต๊อก",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"job",l:"เบิกให้งานซ่อม",v:jid||open[0].id,o:open.map(j=>[j.id,(j.q?"คิว "+j.q+" ":"")+j.device+" ("+cnj(j)+")"])},{k:"pid",l:"อะไหล่",o:ps.map(p=>[p.id,`${p.name} (เหลือ ${p.qty})`])},{k:"qty",l:"จำนวน",t:"number",v:1}],v=>{
+ form("เบิกอะไหล่จากสต๊อก",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"job",l:"เบิกให้งานซ่อม",v:jid||open[0].id,o:open.map(j=>[j.id,(j.q?"คิว "+j.q+" ":"")+j.device+" ("+cnj(j)+")"])},{k:"pid",l:"อะไหล่",o:ps.map(p=>[p.id,pLbl(p)])},{k:"qty",l:"จำนวน",t:"number",v:1}],v=>{
   const p=S.parts.find(x=>x.id===v.pid);if(!p||!(v.qty>0))return false;
   if(v.qty>p.qty){alert("สต๊อกไม่พอ เหลือ "+p.qty+" ชิ้น");return false}
   p.qty-=v.qty;S.trx.push({id:uid(),type:"use",date:v.date,pid:v.pid,qty:v.qty,unit:0,costAt:p.cost,job:v.job});toast("เบิกอะไหล่แล้ว")})}
