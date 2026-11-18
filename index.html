@@ -117,7 +117,12 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 .row2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 12px}
 .tg.w{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#d97706}
 .us{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}.rl .x{border:0;background:none;color:var(--mu);margin-left:4px;padding:0 2px;cursor:pointer;font-size:15px;line-height:1}
-.psrch{margin:0 0 6px}
+.psrch{margin:0}
+.pres{max-height:230px;overflow:auto;border:1px solid var(--bd);border-radius:12px;background:var(--sf);margin-top:6px}
+.pres button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:50px;padding:8px 12px;border:0;background:none;color:var(--tx);text-align:left;cursor:pointer}
+.pres button+button{border-top:1px solid var(--bd)}.pres button:hover,.pres button:focus-visible{background:var(--bg)}
+.pres small{display:block;color:var(--mu);font-size:12px}.pres em{font-style:normal;font-size:12px;color:var(--mu);white-space:nowrap}
+.pres .none{padding:14px;color:var(--mu);font-size:14px;text-align:center}
 .chip.add{border-style:dashed;color:var(--mu)}.gb .chips{margin-bottom:8px}
 .qn{background:var(--ink);color:var(--ac);font:600 12px Prompt,sans-serif;padding:1px 9px;border-radius:6px}.qrow{display:flex;gap:6px;align-items:center;align-self:flex-start;margin-bottom:4px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -357,15 +362,21 @@ const gFlat=(pid="")=>gKids(pid).flatMap(g=>[[g.id,gPath(g.id).join(" › ")],..
 const gOpts=()=>[["","ไม่ระบุกลุ่ม"],...gFlat()];
 const pLbl=p=>`${p.name}${p.grp&&gPath(p.grp).length?" ["+gPath(p.grp).join(" › ")+"]":""} (เหลือ ${p.qty})`;
 const pHay=p=>(p.name+" "+gPath(p.grp||"").join(" ")).toLowerCase();
-function pickSearch(sel,items,onPick){const inp=document.createElement("input"),note=document.createElement("div");
- inp.type="search";inp.className="psrch";inp.placeholder="ค้นหาอะไหล่ (ชื่อ ประเภท ยี่ห้อ รุ่น)";inp.setAttribute("aria-label","ค้นหาอะไหล่");
- note.className="s";note.style.margin="4px 0 0";sel.before(inp);sel.after(note);
- const draw=()=>{const q=inp.value.trim().toLowerCase().split(/\s+/).filter(Boolean),prev=sel.value,m=items.filter(i=>q.every(t=>i[2].includes(t)));
-  sel.innerHTML=m.length?m.map(i=>`<option value="${esc(i[0])}">${esc(i[1])}</option>`).join(""):'<option value="">ไม่พบอะไหล่ที่ค้นหา</option>';
-  if(m.some(i=>i[0]===prev))sel.value=prev;
-  note.textContent=q.length?(m.length?`พบ ${m.length} รายการ`:"ลองค้นด้วยคำอื่น"):"";
-  if(sel.value!==prev&&onPick)onPick()};
- inp.oninput=draw;sel.addEventListener("change",()=>{if(onPick)onPick()})}
+const pItems=l=>l.map(p=>({id:p.id,name:p.name,path:gPath(p.grp||"").join(" › "),qty:p.qty,hay:pHay(p)}));
+function pickSearch(sel,items,onPick){const inp=document.createElement("input"),list=document.createElement("div");let chosen="";
+ inp.type="search";inp.className="psrch";inp.autocomplete="off";inp.placeholder="พิมพ์ค้นหา ชื่อ ประเภท ยี่ห้อ หรือรุ่น แล้วแตะเพื่อเลือก";inp.setAttribute("aria-label","ค้นหาอะไหล่");
+ list.className="pres";list.setAttribute("role","listbox");
+ sel.innerHTML='<option value=""></option>'+items.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join("");sel.value="";sel.style.display="none";
+ sel.before(inp);sel.after(list);
+ const draw=()=>{if(chosen){list.style.display="none";return}
+  const q=inp.value.trim().toLowerCase().split(/\s+/).filter(Boolean),m=items.filter(i=>q.every(t=>i.hay.includes(t)));
+  list.style.display="block";
+  list.innerHTML=m.length?m.map(i=>`<button type="button" role="option" data-id="${esc(i.id)}"><span><b>${esc(i.name)}</b>${i.path?`<small>${esc(i.path)}</small>`:""}</span><em>เหลือ ${i.qty}</em></button>`).join(""):'<div class="none">ไม่พบอะไหล่ที่ค้นหา</div>'};
+ const pick=id=>{const i=items.find(x=>x.id===id);if(!i)return;chosen=id;sel.value=id;inp.value=i.name+(i.path?" ["+i.path+"]":"");draw();if(onPick)onPick();const n=$("#f_qty");if(n)n.focus()};
+ inp.oninput=()=>{if(chosen){chosen="";sel.value=""}draw()};
+ inp.onfocus=()=>{if(chosen)inp.select()};
+ list.onclick=e=>{const b=e.target.closest("button[data-id]");if(b)pick(b.dataset.id)};
+ draw();setTimeout(()=>inp.focus(),80)}
 const partOpts=()=>S.parts.map(p=>[p.id,pLbl(p)]);
 function fCust(id){const e=id?S.cust.find(c=>c.id===id):null;
  form(e?"แก้ไขข้อมูลลูกค้า":"เพิ่มลูกค้า",[{k:"name",l:"ชื่อ",v:e&&e.name},{k:"phone",l:"เบอร์โทร",t:"tel",v:e&&e.phone},{k:"note",l:"หมายเหตุ / รายละเอียด",t:"textarea",v:e&&e.note}],v=>{if(!v.name)return false;if(e)Object.assign(e,v);else S.cust.push({id:uid(),...v})})}
@@ -397,12 +408,12 @@ function gBar(){const chain=GF?gChain(GF):[],cnt=id=>S.parts.filter(p=>gIds(id).
  const cur=chain[chain.length-1];
  return `<div class="gb">${rows}${cur?`<div class="row2"><span class="s">${esc(chain.map(g=>g.name).join(" › "))}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fGrp('${cur.parent||""}','${cur.id}')">แก้ไขชื่อกลุ่ม</button><button class="sm" onclick="delGrp('${cur.id}')">ลบกลุ่ม</button></span></div>`:""}</div>`}
 function fTrx(type){if(!S.parts.length){alert("เพิ่มอะไหล่ก่อน");return}const p0=S.parts[0];
- form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:type==="sell"?p0.price:""},...(AC().length?[{k:"acc",l:type==="buy"?"จ่ายจากบัญชี":"รับเงินเข้าบัญชี",v:defAcc(),o:accOpts()}]:[])],v=>{
+ form(type==="buy"?"ซื้ออะไหล่เข้า":"ขายอะไหล่",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"pid",l:"อะไหล่",o:partOpts()},{k:"qty",l:"จำนวน",t:"number",v:1},{k:"unit",l:type==="buy"?"ราคาซื้อต่อชิ้น":"ราคาขายต่อชิ้น",t:"number",v:""},...(AC().length?[{k:"acc",l:type==="buy"?"จ่ายจากบัญชี":"รับเงินเข้าบัญชี",v:defAcc(),o:accOpts()}]:[])],v=>{
   const p=S.parts.find(x=>x.id===v.pid);if(!p){alert("เลือกอะไหล่ก่อน");return false}if(v.qty<=0)return false;
   if(type==="buy"){p.cost=(p.qty*p.cost+v.qty*v.unit)/(p.qty+v.qty);p.qty+=v.qty;if(!p.price)p.price=v.unit*1.5}
   else{if(v.qty>p.qty){alert("สต๊อกไม่พอ");return false}p.qty-=v.qty}
   S.trx.push({id:uid(),type,date:v.date,pid:v.pid,qty:v.qty,unit:v.unit,costAt:p.cost,...(v.acc?{acc:v.acc}:{})})});
- pickSearch($("#f_pid"),S.parts.map(p=>[p.id,pLbl(p),pHay(p)]),()=>{const p=S.parts.find(x=>x.id===$("#f_pid").value),u=$("#f_unit");if(!p)return;if(type==="sell")u.value=p.price||"";else if(p.cost>0)u.value=Math.round(p.cost*100)/100})}
+ pickSearch($("#f_pid"),pItems(S.parts),()=>{const p=S.parts.find(x=>x.id===$("#f_pid").value),u=$("#f_unit");if(!p)return;if(type==="sell")u.value=p.price||"";else if(p.cost>0)u.value=Math.round(p.cost*100)/100})}
 function fLed(type,job){const js=S.jobs.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
  form(type==="in"?"รายรับ":"รายจ่าย",[{k:"date",l:"วันที่",t:"date",v:today()},{k:"cat",l:"หมวด",o:(type==="in"?["ขายอุปกรณ์เสริม","ค่าบริการเพิ่ม","อื่นๆ"]:["ค่าอะไหล่ซื้อนอก","ค่าแรงช่างนอก","ค่าเช่า","ค่าไฟ/น้ำ/เน็ต","เครื่องมือ","เงินเดือน","อื่นๆ"]).map(x=>[x,x])},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number"},...(AC().length?[{k:"acc",l:type==="in"?"รับเข้าบัญชี":"จ่ายจากบัญชี",v:defAcc(),o:accOpts()}]:[]),{k:"note",l:"รายละเอียด"},{k:"job",l:"เชื่อมกับงานซ่อม (ถ้ามี)",v:job||"",o:[["","ไม่เชื่อมกับงานซ่อม"],...js.map(j=>[j.id,`${j.device} (${cnj(j)})`])]}],v=>{if(!v.amt)return false;if(!v.job)delete v.job;if(!v.acc)delete v.acc;S.led.push({id:uid(),type,...v})})}
 let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
@@ -425,7 +436,7 @@ function fUse(jid){const open=S.jobs.filter(j=>j.status!=="รับเครื
   const p=S.parts.find(x=>x.id===v.pid);if(!p){alert("เลือกอะไหล่ก่อน");return false}if(!(v.qty>0))return false;
   if(v.qty>p.qty){alert("สต๊อกไม่พอ เหลือ "+p.qty+" ชิ้น");return false}
   p.qty-=v.qty;S.trx.push({id:uid(),type:"use",date:v.date,pid:v.pid,qty:v.qty,unit:0,costAt:p.cost,job:v.job});toast("เบิกอะไหล่แล้ว")});
- pickSearch($("#f_pid"),ps.map(p=>[p.id,pLbl(p),pHay(p)]))}
+ pickSearch($("#f_pid"),pItems(ps))}
 function delT(id){const t=S.trx.find(x=>x.id===id),p=S.parts.find(x=>x.id===t.pid);
  if(!confirm(t.type==="use"?"คืนอะไหล่เข้าสต๊อก และลบรายการเบิกนี้?":"ลบรายการนี้? (ปรับสต๊อกกลับให้)"))return;
  if(p){if(t.type==="buy")p.qty=Math.max(0,p.qty-t.qty);else p.qty+=t.qty}
