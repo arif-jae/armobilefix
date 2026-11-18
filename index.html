@@ -256,6 +256,19 @@ async function saveMember(p,v){const self=p.user_id===ME.user_id,upd={name:v.nam
   if(r.error){alert("เปลี่ยนรหัสผ่านไม่สำเร็จ: "+r.error.message);await loadTeam();return}}
  toast(v.password?"บันทึกและเปลี่ยนรหัสผ่านแล้ว":"บันทึกแล้ว");await loadTeam()}
 function fStaff(){form("เพิ่มพนักงาน",[{k:"name",l:"ชื่อพนักงาน"},{k:"email",l:"อีเมล (ใช้ล็อกอิน)",t:"email"},{k:"password",l:"รหัสผ่านเริ่มต้น (อย่างน้อย 6 ตัว)"},{k:"role",l:"สิทธิ์",o:[["staff","พนักงานหน้าร้าน"],["owner","เจ้าของ/ผู้จัดการ"]]}],v=>{if(!v.name||!v.email||v.password.length<6){alert("กรอกชื่อ อีเมล และรหัสผ่านให้ครบ");return false}createStaff(v)})}
+let RJ=false;
+function jobReport(jd){let price=0,extra=0,ext=0,lp=0,us=0,excl=0;
+ const rows=jd.map(j=>{const lk=S.led.filter(l=>l.job===j.id),pr=j.price||0,ex=sum(lk.filter(l=>l.type==="in"),l=>l.amt),e=j.cost||0,
+  p=sum(lk.filter(l=>l.type==="out"&&l.cat==="ค่าอะไหล่ซื้อนอก"),l=>l.amt),u=sum(S.trx.filter(t=>t.type==="use"&&t.job===j.id),t=>t.qty*t.costAt),x=sum(lk.filter(l=>l.type==="out"&&l.cat!=="ค่าอะไหล่ซื้อนอก"),l=>l.amt);
+  price+=pr;extra+=ex;ext+=e;lp+=p;us+=u;excl+=x;const rev=pr+ex,parts=e+p+u;return {j,dn:j.done||j.date,rev,parts,profit:rev-parts}}).sort((a,b)=>b.dn.localeCompare(a.dn));
+ const rev=price+extra,parts=ext+lp+us;return {rows,price,extra,ext,lp,us,excl,rev,parts,profit:rev-parts}}
+function jobRep(r){const pct=r.rev>0?Math.round(r.profit/r.rev*100):0,row=(l,v,c)=>`<div class="li"><span>${l}</span><b class="${c}">${c==="in"?"+":"−"}${f(v)}</b></div>`;
+ return `<h3>กำไรจากงานซ่อม (${r.rows.length} งาน)</h3>
+ <div class="tiles t3"><div class="tile"><span class="k">รายรับงานซ่อม</span><b>฿${f(r.rev)}</b></div><div class="tile"><span class="k">ต้นทุนอะไหล่</span><b class="out">฿${f(r.parts)}</b></div><div class="tile"><span class="k">กำไร</span><b class="${r.profit<0?"out":"in"}">฿${f(r.profit)}</b></div></div>
+ <div class="list">${row("ค่าซ่อมตามราคาจริง",r.price,"in")}${r.extra?row("ค่าบริการเพิ่ม (รายรับที่เชื่อมกับงาน)",r.extra,"in"):""}${row("อะไหล่ซื้อนอกสต๊อก (ใส่ในใบงาน)",r.ext,"out")}${r.lp?row("อะไหล่ซื้อนอก (รายจ่ายที่เชื่อมกับงาน)",r.lp,"out"):""}${row("อะไหล่ที่เบิกจากสต๊อก (ต้นทุนเฉลี่ย)",r.us,"out")}<div class="li"><span><b>กำไรจากงานซ่อม</b></span><b class="${r.profit<0?"out":"in"}">฿${f(r.profit)}${r.rev>0?` <span class="s">(${pct}% ของรายรับ)</span>`:""}</b></div></div>
+ <p class="s" style="margin:8px 0">นับเฉพาะงานที่ลูกค้ามารับเครื่องแล้วในช่วงที่เลือก และหักเฉพาะค่าอะไหล่กับอะไหล่ที่เบิก ไม่รวมค่าเช่า ค่าไฟ หรือรายจ่ายอื่น${r.excl?` (รายจ่ายที่เชื่อมกับงานแต่ไม่ใช่ค่าอะไหล่ ฿${f(r.excl)} ไม่ถูกนับ)`:""}</p>
+ ${r.rows.length?`<button class="chip" onclick="RJ=!RJ;R()">${RJ?"ซ่อนรายละเอียดรายงาน":"ดูรายละเอียดแต่ละงาน"}</button>`:""}
+ ${RJ&&r.rows.length?`<div class="list" style="margin-top:10px">${r.rows.map(x=>`<div class="li"><div class="grow"><b>${x.j.q?"คิว "+x.j.q+" ":""}${esc(x.j.device)}</b><span class="s">${esc(cnj(x.j))} รับเครื่อง ${thD(x.dn)}</span></div><div style="text-align:right;flex:none"><b class="${x.profit<0?"out":"in"}">฿${f(x.profit)}</b><span class="s" style="display:block">รับ ${f(x.rev)} ต้นทุน ${f(x.parts)}</span></div></div>`).join("")}</div>`:""}`}
 function vSum(){
  const jd=S.jobs.filter(j=>j.status==="รับเครื่องแล้ว"&&inM(j.done||j.date)),sl=S.trx.filter(t=>t.type==="sell"&&inM(t.date)),bu=S.trx.filter(t=>t.type==="buy"&&inM(t.date)),li=S.led.filter(l=>l.type==="in"&&inM(l.date)),lo=S.led.filter(l=>l.type==="out"&&inM(l.date));
  const incJ=sum(jd,j=>j.price||0),costJ=sum(jd,j=>j.cost||0),usedJ=sum(S.trx.filter(t=>t.type==="use"&&jd.some(j=>j.id===t.job)),t=>t.qty*t.costAt),incS=sum(sl,t=>t.qty*t.unit),profS=sum(sl,t=>t.qty*(t.unit-t.costAt)),pur=sum(bu,t=>t.qty*t.unit),incL=sum(li,l=>l.amt),outL=sum(lo,l=>l.amt);
@@ -265,9 +278,10 @@ function vSum(){
  return `<section class="hero"><div class="hl">กำไรสุทธิ ${thM(M)}</div><div class="big ${net<0?"neg":""}">${net<0?"−":""}฿${f(Math.abs(net))}</div><div class="sub">จากรายรับ ฿${f(inc)}</div>
  <div class="flow" role="img" aria-label="รายจ่ายคิดเป็น ${pe}% ของรายรับ"><i class="e" style="width:${pe}%"></i><i class="p" style="width:${100-pe}%"></i></div>
  <div class="lg"><span><b class="d e"></b>รายจ่าย ฿${f(exp)}</span><span><b class="d p"></b>กำไร ${net>0?"฿"+f(net):"ยังไม่มี"}</span></div></section>
+ ${jobRep(jobReport(jd))}
  <h3>รายรับ</h3><div class="list">${row("ค่าซ่อม ("+jd.length+" งาน)",incJ,"in")}${row("ขายอะไหล่",incS,"in")}${row("รายรับอื่นๆ",incL,"in")}</div>
  <h3>รายจ่าย</h3><div class="list">${row("ต้นทุนอะไหล่ในงานซ่อม",costJ,"out")}${row("ซื้ออะไหล่เข้าสต๊อก",pur,"out")}${row("ค่าเช่า ค่าไฟ และอื่นๆ",outL,"out")}</div>
- <h3>กำไรแยกตามที่มา</h3><div class="list"><div class="li"><span>งานซ่อม</span><b>฿${f(incJ-costJ-usedJ)}</b></div><div class="li"><span>ขายอะไหล่</span><b>฿${f(profS)}</b></div></div>
+ <h3>กำไรแยกตามที่มา</h3><div class="list"><div class="li"><span>งานซ่อม</span><b>฿${f(jobReport(jd).profit)}</b></div><div class="li"><span>ขายอะไหล่</span><b>฿${f(profS)}</b></div></div>
  <div class="tiles"><button class="tile" onclick="go('parts')"><span class="k">มูลค่าสต๊อกอะไหล่</span><b>฿${f(stock)}</b></button><button class="tile" onclick="go('jobs')"><span class="k">งานที่ค้างอยู่</span><b>${pend} งาน</b></button>${AC().length?`<button class="tile" style="grid-column:1/-1" onclick="go('led')"><span class="k">เงินในบัญชีทั้งหมด</span><b>฿${f(sum(AC(),accBal))}</b></button>`:""}</div>
  <p class="s">นับค่าซ่อมเป็นรายรับเมื่อรับเครื่องแล้ว และนับการซื้ออะไหล่เป็นรายจ่ายตอนซื้อ (ระบบเงินสด) การเบิกอะไหล่จากสต๊อกนับเป็นต้นทุนของงานซ่อม โดยไม่นับเป็นรายจ่ายซ้ำ ข้อมูลเก็บบน Supabase ซิงค์ทุกเครื่องอัตโนมัติ</p>
  <div class="foot"><button class="lk" onclick="exp_()">สำรองข้อมูล</button><button class="lk" onclick="imp_()">นำเข้าข้อมูล</button></div>`}
