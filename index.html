@@ -117,6 +117,7 @@ input,select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px sol
 .row2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 12px}
 .tg.w{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#d97706}
 .us{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}.rl .x{border:0;background:none;color:var(--mu);margin-left:4px;padding:0 2px;cursor:pointer;font-size:15px;line-height:1}
+.acc.recv{border-color:color-mix(in srgb,var(--st2) 50%,var(--bd))}
 .acc.debt{border-color:color-mix(in srgb,var(--out) 45%,var(--bd))}
 .dls{margin-top:4px}.dl{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--bd)}.dl b{font-weight:500;text-align:right}
 .dt-amt{font:700 30px Prompt,sans-serif;margin:2px 0 6px}body.staff .dng{display:none}
@@ -203,9 +204,10 @@ const cph=j=>j.cust?((S.cust.find(c=>c.id===j.cust)||{}).phone||""):(j.cphone||"
 function rv(b){if(b.dataset.on){delete b.dataset.on;b.textContent="รหัสเครื่อง ••••"}else{b.dataset.on=1;b.textContent="รหัสเครื่อง "+b.dataset.p}}
 const AC=()=>S.acc||[];
 const accName=id=>(AC().find(a=>a.id===id)||{}).name||"";
-const isDebt=a=>!!a&&a.type==="debt";
-const accOpts=k=>[["","ไม่ระบุบัญชี"],...AC().filter(a=>k!=="in"||!isDebt(a)).map(a=>[a.id,a.name+(isDebt(a)?" (หนี้สิน)":"")])];
-const defAcc=()=>{const a=AC().find(x=>!isDebt(x));return a?a.id:""};
+const isDebt=a=>!!a&&a.type==="debt",isRecv=a=>!!a&&a.type==="recv";
+const accTag=a=>isDebt(a)?" (หนี้สิน)":isRecv(a)?" (ลูกหนี้)":"";
+const accOpts=k=>[["","ไม่ระบุบัญชี"],...AC().filter(a=>k==="in"?!isDebt(a):!isRecv(a)).map(a=>[a.id,a.name+accTag(a)])];
+const defAcc=()=>{const a=AC().find(x=>!isDebt(x)&&!isRecv(x));return a?a.id:""};
 const nextQ=()=>S.jobs.reduce((m,j)=>Math.max(m,j.q||0),0)+1;
 function ensureQ(){let n=nextQ()-1;S.jobs.filter(j=>!j.q).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.id<b.id?-1:1)).forEach(j=>{j.q=++n})}
 const hasW=j=>j.war!==false;
@@ -231,7 +233,7 @@ function mi(k){popClose();MENU[k]()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")popClose()});
 function fabGo(){if(POP){popClose();return}({jobs:fJob,cust:fCust,team:fStaff,
  parts:()=>menu("เพิ่มรายการอะไหล่",[["ขายอะไหล่",()=>fTrx("sell"),"g","in"],["เบิกอะไหล่",()=>fUse(),"o","jobs"],["ซื้อเข้าสต๊อก",()=>fTrx("buy"),"r","out"],["เพิ่มอะไหล่ใหม่",fPart,"b","plus"]]),
- led:()=>menu("เพิ่มรายการรับ-จ่าย",[["รายจ่าย",()=>fLed("out"),"r","out"],["รายรับ",()=>fLed("in"),"g","in"],...(ME.role==="owner"?[["โอนเงิน",()=>fXfer(),"b","swap"],...(AC().some(isDebt)?[["ชำระหนี้",()=>fXfer(null,"pay"),"o","swap"]]:[])]:[])])})[T]()}
+ led:()=>menu("เพิ่มรายการรับ-จ่าย",[["รายจ่าย",()=>fLed("out"),"r","out"],["รายรับ",()=>fLed("in"),"g","in"],...(ME.role==="owner"?[["โอนเงิน",()=>fXfer(),"b","swap"],...(AC().some(isDebt)?[["ชำระหนี้",()=>fXfer(null,"pay"),"o","swap"]]:[]),...(AC().some(isRecv)?[["รับชำระลูกหนี้",()=>fXfer(null,"collect"),"g","in"]]:[])]:[])])})[T]()}
 function go(t){popClose();T=t;CV=null;R();if(t==="team")loadTeam()}
 async function loadTeam(){const {data}=await sb.from("profiles").select("*").order("created_at");TEAM=data||[];if(T==="team")R()}
 const sb2=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
@@ -343,9 +345,11 @@ function txList(all){const ok=d=>all||inM(d),T_=[];
 function accBal(a){let b=Number(a.open)||0;const sg=isDebt(a)?-1:1;
  txList(true).forEach(x=>{if(x.acc===a.id)b+=sg*(x.type==="in"?x.amt:-x.amt)});
  (S.xfer||[]).forEach(t=>{b+=sg*((t.to===a.id?t.amt:0)-(t.from===a.id?t.amt:0))});return b}
-function accTot(){const as=AC().filter(a=>!isDebt(a)),db=AC().filter(isDebt);return {as:sum(as,accBal),db:sum(db,accBal)}}
-function accTiles(){if(!AC().length)return"";const t=accTot();return `<button class="tile" ${t.db?"":'style="grid-column:1/-1" '}onclick="go('led')"><span class="k">เงินในบัญชีทั้งหมด</span><b>฿${f(t.as)}</b></button>${t.db?`<button class="tile" onclick="go('led')"><span class="k">หนี้สินคงค้าง</span><b class="out">฿${f(t.db)}</b></button>`:""}`}
-const xferCat=t=>isDebt(AC().find(a=>a.id===t.to))?"ชำระหนี้":isDebt(AC().find(a=>a.id===t.from))?"กู้ยืม":"โอนเงิน";
+function accTot(){const l=AC().filter(a=>!isDebt(a)&&!isRecv(a));return {as:sum(l,accBal),rc:sum(AC().filter(isRecv),accBal),db:sum(AC().filter(isDebt),accBal)}}
+function accSum(){const t=accTot();if(!t.rc&&!t.db)return "รวม ฿"+f(t.as);const p=["เงิน ฿"+f(t.as)];if(AC().some(isRecv))p.push("ลูกหนี้ ฿"+f(t.rc));if(AC().some(isDebt))p.push("หนี้ ฿"+f(t.db));return p.join(" ")}
+function accTiles(){if(!AC().length)return"";const t=accTot(),L=[["เงินในบัญชีทั้งหมด",t.as,""]];if(AC().some(isRecv))L.push(["ลูกหนี้คงค้าง",t.rc,""]);if(AC().some(isDebt))L.push(["หนี้สินคงค้าง",t.db,"out"]);
+ return L.map((x,i)=>`<button class="tile" ${i===0&&L.length%2?'style="grid-column:1/-1" ':""}onclick="go('led')"><span class="k">${x[0]}</span><b class="${x[2]}">฿${f(x[1])}</b></button>`).join("")}
+const xferCat=t=>{const fr=AC().find(a=>a.id===t.from),to=AC().find(a=>a.id===t.to);return isDebt(to)?"ชำระหนี้":isDebt(fr)?"กู้ยืม":isRecv(fr)?"รับชำระลูกหนี้":isRecv(to)?"ให้ยืม":"โอนเงิน"};
 const thF=d=>new Date(d+"T00:00").toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"});
 function txDetail(kind,ref,type){let title="",amt=0,cls="",sign="",rows=[],btns="",note="";
  const dl=(l,v,c)=>v?`<div class="dl${c?" "+c:""}"><span class="s">${l}</span><b>${v}</b></div>`:"",jl=j=>j?(j.q?"คิว "+j.q+" ":"")+esc(j.device)+" ("+esc(cnj(j))+")":"";
@@ -368,15 +372,16 @@ function txDetail(kind,ref,type){let title="",amt=0,cls="",sign="",rows=[],btns=
 function dtDel(kind,ref){({led:()=>del("led",ref),xfer:()=>del("xfer",ref),trx:()=>delT(ref)})[kind]();
  const gone=kind==="trx"?!S.trx.find(t=>t.id===ref):!S[kind].find(x=>x.id===ref);if(gone)closeM()}
 function fAcc(id,pre){const e=id?AC().find(a=>a.id===id):null;
- form(e?"แก้ไขบัญชี":(pre==="debt"?"เพิ่มหนี้สิน":"เพิ่มบัญชี"),[{k:"name",l:"ชื่อบัญชี (เช่น เงินสดหน้าร้าน, กสิกร, เจ้าหนี้ร้านอะไหล่, บัตรเครดิต)",v:e&&e.name},{k:"type",l:"ประเภท",v:e?e.type:(pre||"cash"),o:[["cash","เงินสด"],["bank","บัญชีธนาคาร"],["debt","หนี้สิน (เจ้าหนี้ เงินกู้ บัตรเครดิต)"]]},{k:"open",l:"ยอดตั้งต้น (บาท) ถ้าเป็นหนี้สินให้ใส่ยอดที่ค้างชำระอยู่",t:"number",v:e?e.open:""}],v=>{if(!v.name)return false;
+ form(e?"แก้ไขบัญชี":(pre==="debt"?"เพิ่มหนี้สิน":pre==="recv"?"เพิ่มบัญชีลูกหนี้":"เพิ่มบัญชี"),[{k:"name",l:"ชื่อบัญชี (เช่น เงินสดหน้าร้าน, กสิกร, เจ้าหนี้ร้านอะไหล่, ลูกหนี้ คุณเอก)",v:e&&e.name},{k:"type",l:"ประเภท",v:e?e.type:(pre||"cash"),o:[["cash","เงินสด"],["bank","บัญชีธนาคาร"],["recv","ลูกหนี้ (ลูกค้าค้างชำระเรา)"],["debt","หนี้สิน (เจ้าหนี้ เงินกู้ บัตรเครดิต)"]]},{k:"open",l:"ยอดตั้งต้น (บาท) ถ้าเป็นลูกหนี้หรือหนี้สินให้ใส่ยอดที่ค้างอยู่",t:"number",v:e?e.open:""}],v=>{if(!v.name)return false;
   if(e)Object.assign(e,v);else{S.acc=S.acc||[];S.acc.push({id:uid(),...v})}})}
 function delAcc(id){const a=AC().find(x=>x.id===id);if(!a||!confirm("ลบบัญชี "+a.name+"? รายการที่เคยบันทึกจะยังอยู่แต่ไม่ผูกกับบัญชี และรายการโอนเงินที่เกี่ยวข้องจะถูกลบ"))return;
  [S.led,S.trx,S.jobs].forEach(l=>l.forEach(x=>{if(x.acc===id)delete x.acc}));S.xfer=(S.xfer||[]).filter(t=>t.from!==id&&t.to!==id);S.acc=S.acc.filter(x=>x.id!==id);AF="";R()}
-function fXfer(id,mode){const a=AC(),e=id?(S.xfer||[]).find(t=>t.id===id):null,pay=!e&&mode==="pay",as=a.filter(x=>!isDebt(x)),db=a.filter(isDebt);
+function fXfer(id,mode){const a=AC(),e=id?(S.xfer||[]).find(t=>t.id===id):null,pay=!e&&mode==="pay",col=!e&&mode==="collect",liq=a.filter(x=>!isDebt(x)&&!isRecv(x)),db=a.filter(isDebt),rc=a.filter(isRecv);
  if(!e&&a.length<2){alert("ต้องมีบัญชีอย่างน้อย 2 บัญชีจึงจะโอนเงินได้ กดการ์ด “เพิ่มบัญชี” ในหน้ารับ-จ่ายก่อน");return}
- if(pay&&(!db.length||!as.length)){alert("ต้องมีบัญชีเงินสดหรือธนาคาร 1 บัญชี และบัญชีหนี้สิน 1 บัญชี");return}
- const opt=l=>l.map(x=>[x.id,x.name+(isDebt(x)?" (หนี้สิน)":"")]),fr=e?e.from:(pay?as[0].id:(AF||a[0].id));
- form(e?"แก้ไขรายการโอน":pay?"ชำระหนี้":"โอนเงินระหว่างบัญชี",[{k:"date",l:"วันที่",t:"date",v:e?e.date:today()},{k:"from",l:pay?"ชำระจากบัญชี":"จากบัญชี",v:fr,o:opt(pay?as:a)},{k:"to",l:pay?"ชำระให้หนี้สิน":"ไปยังบัญชี (เลือกหนี้สินเพื่อชำระหนี้)",v:e?e.to:(pay?(db.find(x=>x.id===AF)||db[0]).id:(a.find(x=>x.id!==fr)||a[1]).id),o:opt(pay?db:a)},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number",v:e?e.amt:""},{k:"note",l:"หมายเหตุ",v:e&&e.note}],v=>{
+ if(pay&&(!db.length||!liq.length)){alert("ต้องมีบัญชีเงินสดหรือธนาคาร 1 บัญชี และบัญชีหนี้สิน 1 บัญชี");return}
+ if(col&&(!rc.length||!liq.length)){alert("ต้องมีบัญชีลูกหนี้ 1 บัญชี และบัญชีเงินสดหรือธนาคาร 1 บัญชี");return}
+ const opt=l=>l.map(x=>[x.id,x.name+accTag(x)]),fr=e?e.from:(pay?liq[0].id:col?(rc.find(x=>x.id===AF)||rc[0]).id:(AF||a[0].id));
+ form(e?"แก้ไขรายการโอน":pay?"ชำระหนี้":col?"รับชำระจากลูกหนี้":"โอนเงินระหว่างบัญชี",[{k:"date",l:"วันที่",t:"date",v:e?e.date:today()},{k:"from",l:pay?"ชำระจากบัญชี":col?"ลูกหนี้ที่ชำระมา":"จากบัญชี",v:fr,o:opt(pay?liq:col?rc:a)},{k:"to",l:pay?"ชำระให้หนี้สิน":col?"รับเข้าบัญชี":"ไปยังบัญชี (เลือกหนี้สินเพื่อชำระหนี้ หรือลูกหนี้เพื่อให้ยืม)",v:e?e.to:(pay?(db.find(x=>x.id===AF)||db[0]).id:col?liq[0].id:(a.find(x=>x.id!==fr)||a[1]).id),o:opt(pay?db:col?liq:a)},{k:"amt",l:"จำนวนเงิน (บาท)",t:"number",v:e?e.amt:""},{k:"note",l:"หมายเหตุ",v:e&&e.note}],v=>{
   if(!v.amt||v.amt<=0)return false;if(v.from===v.to){alert("เลือกบัญชีต้นทางและปลายทางให้ต่างกัน");return false}
   if(e)Object.assign(e,v);else{S.xfer=S.xfer||[];S.xfer.push({id:uid(),...v})}})}
 function fTrxEdit(id){const t=S.trx.find(x=>x.id===id);if(!t)return;
@@ -385,8 +390,8 @@ let LF="all",AF="",CF="";
 function catChips(o){const sm={};o.forEach(x=>sm[x.cat]=(sm[x.cat]||0)+x.amt);const cs=Object.keys(sm);if(!cs.includes("เครื่องมือ"))cs.push("เครื่องมือ");
  return `<div class="chips">${`<button class="chip${!CF?" on":""}" onclick="CF='';R()">ทุกหมวด</button>`}${cs.map(c=>`<button class="chip${CF===c?" on":""}" onclick="CF='${c}';R()">${esc(c)} <b>${f(sm[c]||0)}</b></button>`).join("")}</div>`}
 function accSec(){const a=AC(),cur=a.find(x=>x.id===AF),own=ME.role==="owner";if(!a.length&&!own)return"";
- return `<div class="pf"><div class="top" style="margin:0 0 8px"><h3 style="margin:0">บัญชีหมุนเวียน</h3>${a.length?`<span class="s">${accTot().db?`เงิน ฿${f(accTot().as)} หนี้ ฿${f(accTot().db)}`:`รวม ฿${f(accTot().as)}`}</span>`:""}</div>
- <div class="chips accs">${a.map(x=>{const b=accBal(x);return `<button class="acc${AF===x.id?" on":""}${isDebt(x)?" debt":""}" onclick="AF=AF==='${x.id}'?'':'${x.id}';R()"><span class="s">${x.type==="bank"?"บัญชีธนาคาร":isDebt(x)?"หนี้สิน (ยอดค้างชำระ)":"เงินสด"}</span><b>${esc(x.name)}</b><span class="bal${b<0||isDebt(x)?" out":""}">฿${f(b)}</span></button>`}).join("")}${own?`<button class="acc add" onclick="fAcc()">${ic("plus",18)}<span>เพิ่มบัญชี</span></button><button class="acc add" onclick="fAcc(null,'debt')">${ic("plus",18)}<span>เพิ่มหนี้สิน</span></button>`:""}</div>
+ return `<div class="pf"><div class="top" style="margin:0 0 8px"><h3 style="margin:0">บัญชีหมุนเวียน</h3>${a.length?`<span class="s">${accSum()}</span>`:""}</div>
+ <div class="chips accs">${a.map(x=>{const b=accBal(x);return `<button class="acc${AF===x.id?" on":""}${isDebt(x)?" debt":""}${isRecv(x)?" recv":""}" onclick="AF=AF==='${x.id}'?'':'${x.id}';R()"><span class="s">${x.type==="bank"?"บัญชีธนาคาร":isDebt(x)?"หนี้สิน (ยอดค้างชำระ)":isRecv(x)?"ลูกหนี้ (ลูกค้าค้างชำระ)":"เงินสด"}</span><b>${esc(x.name)}</b><span class="bal${b<0||isDebt(x)?" out":""}">฿${f(b)}</span></button>`}).join("")}${own?`<button class="acc add" onclick="fAcc()">${ic("plus",18)}<span>เพิ่มบัญชี</span></button><button class="acc add" onclick="fAcc(null,'debt')">${ic("plus",18)}<span>เพิ่มหนี้สิน</span></button><button class="acc add" onclick="fAcc(null,'recv')">${ic("plus",18)}<span>เพิ่มลูกหนี้</span></button>`:""}</div>
  ${a.length?"":'<p class="s" style="margin:-4px 0 12px">เพิ่มบัญชีเงินสดหรือบัญชีธนาคาร เพื่อดูยอดคงเหลือและโอนเงินระหว่างบัญชี</p>'}
  ${cur&&own?`<div class="row2"><span class="s">กำลังดูเฉพาะบัญชี ${esc(cur.name)}</span><span class="acts"><button class="chip" style="padding:3px 10px;font-size:12px" onclick="fAcc('${cur.id}')">แก้ไขบัญชี</button><button class="sm" onclick="delAcc('${cur.id}')">ลบบัญชี</button></span></div>`:""}</div>`}
 function vLed(){const base=txList().filter(x=>!AF||x.acc===AF),i=sum(base.filter(x=>x.type==="in"),x=>x.amt),o=sum(base.filter(x=>x.type==="out"),x=>x.amt),dA=isDebt(AC().find(x=>x.id===AF));
